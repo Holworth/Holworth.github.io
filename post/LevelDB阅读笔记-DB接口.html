@@ -542,7 +542,6 @@ LEVELDB_EXPORT Status <span class="token function">RepairDB</span><span class="t
                                <span class="token keyword">const</span> Options<span class="token operator">&amp;</span> options<span class="token punctuation">)</span><span class="token punctuation">;</span>
 
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
 <h3 id="接口"><a href="#接口" class="headerlink" title="接口"></a>接口</h3><ul>
 <li><p>DB的创建： <code>static Open(const Options&amp; options, const std::string&amp; name, DB** dbptr)</code></p>
 <p>Q: 为什么不直接把name放到options里面，还要单独为name占据一个参数的位置呢？</p>
@@ -556,19 +555,19 @@ LEVELDB_EXPORT Status <span class="token function">RepairDB</span><span class="t
 <span class="token keyword">virtual</span> Status <span class="token function">Write</span><span class="token punctuation">(</span><span class="token keyword">const</span> WriteOptions<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> WriteBatch<span class="token operator">*</span> updates<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
 
 <span class="token keyword">virtual</span> Status <span class="token function">Get</span><span class="token punctuation">(</span><span class="token keyword">const</span> ReadOptions<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> key<span class="token punctuation">,</span> std<span class="token double-colon punctuation">::</span>string<span class="token operator">*</span> value<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
-
-
-<p>其中，每个读写操作：<code>Put, Delete, Write, Get</code>都带有一个对应的Option参数作为本次操作的配置。此外，<code>Put，Delete</code>操作都是单次操作，可以看到：它们的参数都是单个的key和value；但是<code>Write</code>操作是批量更新操作，其参数是一个<code>WriteBatch</code>。</p>
-<p>为一个KV数据库同时提供单点的更新：<code>Put</code>与<code>Delete</code>, 以及批量更新的操作<code>Write</code>是一种非常典型的模式。这背后，是有应用需求在支持这种设计。显然单点更新的延迟更低，但批量更新可以获得较高的吞吐，各自有各自的优势。而且很难说LevelDB内部是不是也可能将一个<code>Put</code>和<code>Delete</code>单次更新缓存在一个<code>WriteBatch</code>中。</p>
 </li>
+</ul>
+<p>  其中，每个读写操作：<code>Put, Delete, Write, Get</code>都带有一个对应的Option参数作为本次操作的配置。此外，<code>Put，Delete</code>操作都是单次操作，可以看到：它们的参数都是单个的key和value；但是<code>Write</code>操作是批量更新操作，其参数是一个<code>WriteBatch</code>。</p>
+<p>  为一个KV数据库同时提供单点的更新：<code>Put</code>与<code>Delete</code>, 以及批量更新的操作<code>Write</code>是一种非常典型的模式。这背后，是有应用需求在支持这种设计。显然单点更新的延迟更低，但批量更新可以获得较高的吞吐，各自有各自的优势。而且很难说LevelDB内部是不是也可能将一个<code>Put</code>和<code>Delete</code>单次更新缓存在一个<code>WriteBatch</code>中。</p>
+<ul>
 <li><p>范围操作：</p>
 <p><code>virtual Iterator* NewIterator(const ReadOptions&amp; options) = 0;</code></p>
 <p>LevelDB并没有提供显式的range操作，通过返回迭代器来由用户进行范围查询。迭代器应该包含哪些数据结构，以及如何维护迭代器与DB本身数据之间的一致性，我认为是设计迭代器这类数据结构的难点。</p>
 </li>
 <li><p>获取数据库本身的信息：</p>
 <pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">virtual</span> <span class="token keyword">bool</span> <span class="token function">GetProperty</span><span class="token punctuation">(</span><span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> property<span class="token punctuation">,</span> std<span class="token double-colon punctuation">::</span>string<span class="token operator">*</span> value<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
-<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">GetApproximateSizes</span><span class="token punctuation">(</span><span class="token keyword">const</span> Range<span class="token operator">*</span> range<span class="token punctuation">,</span> <span class="token keyword">int</span> n<span class="token punctuation">,</span> <span class="token keyword">uint64_t</span><span class="token operator">*</span> sizes<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre></li>
+<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">GetApproximateSizes</span><span class="token punctuation">(</span><span class="token keyword">const</span> Range<span class="token operator">*</span> range<span class="token punctuation">,</span> <span class="token keyword">int</span> n<span class="token punctuation">,</span> <span class="token keyword">uint64_t</span><span class="token operator">*</span> sizes<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+</li>
 </ul>
 <p>​    实际上，这部分并不是一个KV设计的重点，但是至少还是应该要有。</p>
 <hr>
@@ -576,7 +575,8 @@ LEVELDB_EXPORT Status <span class="token function">RepairDB</span><span class="t
 <ul>
 <li><p>LevelDB使用<code>static</code>函数来进行一个DB对象的创建，这种方式与<code>DBImpl</code>对DB的继承有关，可以屏蔽底层的实现细节：</p>
 <pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// db_impl.cc: </span>
-Status <span class="token class-name">DB</span><span class="token double-colon punctuation">::</span><span class="token function">Open</span><span class="token punctuation">(</span><span class="token keyword">const</span> Options<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> <span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>string<span class="token operator">&amp;</span> dbname<span class="token punctuation">,</span> DB<span class="token operator">*</span><span class="token operator">*</span> dbptr<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre></li>
+Status <span class="token class-name">DB</span><span class="token double-colon punctuation">::</span><span class="token function">Open</span><span class="token punctuation">(</span><span class="token keyword">const</span> Options<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> <span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>string<span class="token operator">&amp;</span> dbname<span class="token punctuation">,</span> DB<span class="token operator">*</span><span class="token operator">*</span> dbptr<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+</li>
 <li><p>与<code>Open</code>对应的是，<code>DestroyDB, RepairDB</code>均不是作为DB的成员函数，而是独立于<code>class DB</code>实现的函数，并且其参数中也没有明确的<code>DB*</code>指针来指明操作的目标DB, 而是与<code>Open</code>一样，是通过<code>std::string</code>类型的<code>dbname</code>作为参数实现的。</p>
 </li>
 <li><p>其他的接口均作为DB的成员函数来提供服务，但都被设置为纯虚函数，以此来屏蔽实现细节。</p>
@@ -605,14 +605,13 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
 <span class="token keyword">struct</span> <span class="token class-name">ReadOptions</span><span class="token punctuation">;</span>
 <span class="token keyword">struct</span> <span class="token class-name">WriteOptions</span><span class="token punctuation">;</span> <span class="token comment">// 3个用于进行configuration的option结构，注意它们并非相互继承的关系</span>
 <span class="token keyword">class</span> <span class="token class-name">WriteBatch</span><span class="token punctuation">;</span> <span class="token comment">// 多个Update操(指Put和Delete)的聚合，用于一次性apply多个更新操作</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
 <h3 id="Options类"><a href="#Options类" class="headerlink" title="Options类"></a>Options类</h3><p>Options类内部的参数对整个DB的执行行为进行了控制，并且对一些内部数据结构的参数进行了指定。按照代码中的注释，<code>class Options</code>的配置参数可以分为两类：</p>
 <ul>
 <li><p>Affect Behaviour</p>
 <ul>
 <li><code>bool create_if_missing = false; &amp; bool error_if_exists = false;</code> ： 用于在打开一个DB时控制该DB的行为，前者指定当目标DB不存在时(<code>Open()</code>)是否要创建db，后者用于指定当一个db存在时是否要报错。由于<code>DB</code>只提供了Open接口，因此这个借口需要同时实现：Create以及Open existed的功能。</li>
-<li><code>  Env* env</code>: 说明当前执行的环境，主要是操作系统相关的一些东西。作为一个跨平台执行的数据库，基于系统封装很有必要</li>
-<li><code>  const Comparator* comparator</code>: 说明该DB所基于的排序。很明显，同一个DB自从创建开始就应该一直使用相同的顺序，代码的注释中特别提到了这一点。</li>
+<li><code>Env* env</code>: 说明当前执行的环境，主要是操作系统相关的一些东西。作为一个跨平台执行的数据库，基于系统封装很有必要</li>
+<li><code>const Comparator* comparator</code>: 说明该DB所基于的排序。很明显，同一个DB自从创建开始就应该一直使用相同的顺序，代码的注释中特别提到了这一点。</li>
 <li><code>Logger* info_log = nullptr</code>: 用于指定日志信息的输出目标，如果此处设置为nullptr，leveldb内部会创建新的文件用于存储日志。值得说明的是，这里的日志和DB内部的写前日志(Write-Ahead Log)不是一个东西, 更像是用于记录运行时状态的日志信息。（这里也可以看出作为一个工业产品与科研玩具的不同。）</li>
 </ul>
 </li>
@@ -628,14 +627,12 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
   <span class="token keyword">bool</span> fill_cache <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
   <span class="token keyword">const</span> Snapshot<span class="token operator">*</span> snapshot <span class="token operator">=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span>
 <span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
 <p><code>ReadOptions</code>类的配置参数较少，并且从其命名上就能看出该配置代表的性质。值得注意的是<code>fill_cache</code>，该值表明了在读取时是否用读取的数据来填充cache，作者在注释中的建议是在进行<code>scan range</code>时不要将该参数设置为true: 在范围查询会通过<code>NewIterator</code>返回一个迭代器，返回查询是通过不断递增这个迭代器来达到目的的，如果fill_cache设置为true，可能会导致执行scan时数据不断填充cache，从而导致cache被”污染“。</p>
 <h3 id="WriteOptions类"><a href="#WriteOptions类" class="headerlink" title="WriteOptions类"></a>WriteOptions类</h3><p>WriteOptions仅有一个参数<code>sync</code>,用于控制该次写操作是否从操作系统buffer中被刷新到磁盘上。显然，如果该值被置为true，那么写操作很慢但是会被持久化，反之db将无法保证此次写操作的持久化。</p>
 <p>LevelDB的一次写会被先写入到memtable中，然后再一次性将一个memtable刷新到磁盘中。如果在一次Put操作中将该值置为true，那么这次写操作会bypass memtable吗？还是说它会照常写入memtable，但是提前进行memtable的flush。这个问题需要到后面看到memtable的部分才能完全解答。</p>
 <hr>
 <h3 id="WriteBatch类"><a href="#WriteBatch类" class="headerlink" title="WriteBatch类"></a>WriteBatch类</h3><p><code>WriteBatch</code>类是leveldb提供给用户的头文件内容之一，因为该类被用于<code>DB</code>的<code>Write</code>接口：</p>
 <pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">virtual</span> Status <span class="token function">Write</span><span class="token punctuation">(</span><span class="token keyword">const</span> WriteOptions<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> WriteBatch<span class="token operator">*</span> updates<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-
 <p>从名字可以看出来,<code>WriteBatch</code>缓存了多个<code>Put, Delete</code>请求，然后通过一次<code>Write</code>调用写入到DB内部。通过<code>write_batch.h</code>文件头部的注释可以看出这一点：</p>
 <pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// WriteBatch holds a collection of updates to apply atomically to a DB.</span>
 <span class="token comment">//</span>
@@ -652,7 +649,6 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
 <span class="token comment">// external synchronization, but if any of the threads may call a</span>
 <span class="token comment">// non-const method, all threads accessing the same WriteBatch must use</span>
 <span class="token comment">// external synchronization.</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
 <p>不过让我好奇的是这里所谓的：<code>apply atomically to a DB</code>是什么意思，<code>atomically</code>需要从两个方面满足要求：</p>
 <ul>
 <li>多个线程并发写入或读取时需要保证一个batch内部的数据是原子更新的</li>
@@ -708,7 +704,6 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
   std<span class="token double-colon punctuation">::</span>string rep_<span class="token punctuation">;</span>  <span class="token comment">// See comment in write_batch.cc for the format of rep_</span>
 <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
 <p>此外，<code>WriteBatch</code>还提供了一个<code>Handler</code>类，这个类是一个抽象基类，并且仅提供了<code>Put</code>和<code>Delete</code>接口，其含义是，Handler会将WriteBatch中的记录应用于对应的其他对象上，这里的其他对象取决于Handler内部的实现。</p>
 <p>例如，在<code>write_batch.cc</code>中，通过继承<code>WriteBatch::Handler</code>实现了<code>MemTable::Inserter</code>，因此，可以将一个WriteBatch中的所有数据应用于指定的MemTable上。应用的方式是通过调用WriteBatch中的<code>Iterate</code>函数，遍历所有记录，对每个记录调用<code>Handler</code>的对应Put或是Delete操作。</p>
 <hr>
@@ -742,7 +737,6 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
   <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">Append</span><span class="token punctuation">(</span>WriteBatch<span class="token operator">*</span> dst<span class="token punctuation">,</span> <span class="token keyword">const</span> WriteBatch<span class="token operator">*</span> src<span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
 <p>正是通过这样连接<code>WriteBatch</code>与<code>WriteBatchInternal</code>之间的关系，leveldb屏蔽了<code>WriteBatch</code>的具体实现细节，并且在<code>WriteBatchInternal</code>内部提供了额外的接口使得leveldb内部其他组件也可以使用<code>WriteBatch</code>（例如memtable）。</p>
 <hr>
 <h5 id="batch内部数据格式"><a href="#batch内部数据格式" class="headerlink" title="batch内部数据格式"></a>batch内部数据格式</h5><p>由于<code>WriteBatch</code>是通过一个<code>std::string</code>来存储所有数据，而<code>std::string</code>基本上就只是一个<code>char</code>数组，因此需要有固定的格式才能从这个char数组中解析出每一个Put和Delete请求。</p>
@@ -754,7 +748,6 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
 <span class="token comment">// Records:</span>
 <span class="token comment">// 	|&lt;-ValueType->|&lt;-KeySize->|&lt;-KeyContents->|&lt;-ValueSize->|&lt;-ValueContents->|</span>
 <span class="token comment">//  |&lt;----1B----->|&lt;-------------------Unknown------------------------------->|</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
 <p>首先，一个<code>WriteBatch</code>对象包含了一个头部（Header), 用于一个8B的sequence number，以及一个4B的Count，前者说明这一个Batch内的所有记录的Sequence Number，后者说明记录的数目。</p>
 <p>紧接着的是多条操作记录，记录是Put还是Get是通过<code>ValueType(kTypeValue, kTypeDeletion)</code>来标识的，然后是经过<code>Encoding</code>的keysize，以及key的contents，以及经过<code>Encoding</code>的<code>value size</code>,以及<code>value</code>的内容。只有当<code>ValueType</code>表示是一次Put操作，即该值为(<code>kTypeValue</code>)时才会有Value域。</p>
 <hr>
@@ -766,9 +759,6 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
   																			<span class="token comment">// 内容</span>
   <span class="token function">PutLengthPrefixedSlice</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>rep_<span class="token punctuation">,</span> value<span class="token punctuation">)</span><span class="token punctuation">;</span>	<span class="token comment">// 添加value</span>
 <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
-
-
 <p>一个值得特别说明的实现是<code>Iterate</code>函数，该函数调用时传入一个<code>Handler</code>, 由<code>Handler</code>内部实现对每条记录如何应用到其他结构上：如memtable。</p>
 <pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Status <span class="token class-name">WriteBatch</span><span class="token double-colon punctuation">::</span><span class="token function">Iterate</span><span class="token punctuation">(</span>Handler<span class="token operator">*</span> handler<span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">&#123;</span>
   Slice <span class="token function">input</span><span class="token punctuation">(</span>rep_<span class="token punctuation">)</span><span class="token punctuation">;</span>
@@ -806,7 +796,6 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
     <span class="token keyword">return</span> <span class="token class-name">Status</span><span class="token double-colon punctuation">::</span><span class="token function">OK</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
   <span class="token punctuation">&#125;</span>
 <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
 <p>从上述实现中，我们应该明白，对于这类内部具有特定数据格式的字符串，我们在使用时必须完全检查它的每一个域，以确保其内容是绝对合法的。例如，在最后，该函数还检查了在<code>while</code>循环中执行的记录数目是否真正等于batch头部记录的count的数目。</p>
 <hr>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>到目前为止，我们已经考察了leveldb对外提供的类接口，即<code>class DB</code>这个抽象基类，以及<code>Options</code>这族用于控制数据库行为的参数类，还有就是用于批量更新的<code>WriteBatch</code>类。我们学到了以下内容：</p>
@@ -826,7 +815,6 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
 <p>简单来说，如果你只需要遍历所有数据，那么使用后者；如果你需要迭代器来实现更加丰富的功能，比如从指定位置开始，向后遍历，重置迭代器等操作；使用后者。</p>
 </li>
 </ul>
-<hr>
 
                 
             </div>
@@ -843,7 +831,7 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="/about" rel="external nofollow noreferrer">John Doe</a>
+                    <a href="/about" rel="external nofollow noreferrer"></a>
                 </span>
             </div>
             <div class="reprint__type">
@@ -866,7 +854,7 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
                     本博客所有文章除特別声明外，均采用
                     <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
                     许可协议。转载请注明来源
-                    <a href="/about" target="_blank">John Doe</a>
+                    <a href="/about" target="_blank"></a>
                     !
                 </span>
             </div>
@@ -1070,18 +1058,17 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
 <article id="prenext-posts" class="prev-next articles">
     <div class="row article-row">
         
-        <div class="article col s12 m6" data-aos="fade-up" data-aos="fade-up">
+        <div class="article col s12 m6" data-aos="fade-up">
             <div class="article-badge left-badge text-color">
-                <i class="far fa-dot-circle"></i>&nbsp;本篇
-            </div>
+                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
             <div class="card">
-                <a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-DB%E6%8E%A5%E5%8F%A3.html">
+                <a href="/post/Definition-of-Ring.html">
                     <div class="card-image">
                         
                         
-                        <img src="/medias/featureimages/14.jpg" class="responsive-img" alt="LevelDB阅读笔记:DB接口">
+                        <img src="/medias/featureimages/20.jpg" class="responsive-img" alt="Definition of Ring">
                         
-                        <span class="card-title">LevelDB阅读笔记:DB接口</span>
+                        <span class="card-title">Definition of Ring</span>
                     </div>
                 </a>
                 <div class="card-content article-content">
@@ -1091,35 +1078,30 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
                         
                     </div>
                     <div class="publish-info">
-                            <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2022-01-26
-                            </span>
+                        <span class="publish-date">
+                            <i class="far fa-clock fa-fw icon-date"></i>2022-01-27
+                        </span>
                         <span class="publish-author">
                             
                             <i class="fas fa-bookmark fa-fw icon-category"></i>
                             
-                            <a href="/categories/Coding/" class="post-category">
-                                    Coding
+                            <a href="/categories/Mathematics/" class="post-category">
+                                    Mathematics
                                 </a>
                             
                             
                         </span>
                     </div>
                 </div>
-
                 
                 <div class="card-action article-tags">
                     
-                    <a href="/tags/LevelDB/">
-                        <span class="chip bg-color">LevelDB</span>
+                    <a href="/tags/Ring-Theory/">
+                        <span class="chip bg-color">Ring Theory</span>
                     </a>
                     
-                    <a href="/tags/C/">
-                        <span class="chip bg-color">C++</span>
-                    </a>
-                    
-                    <a href="/tags/KV/">
-                        <span class="chip bg-color">KV</span>
+                    <a href="/tags/AlgebraChapter0/">
+                        <span class="chip bg-color">AlgebraChapter0</span>
                     </a>
                     
                 </div>
@@ -1154,8 +1136,12 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
                             </span>
                         <span class="publish-author">
                             
-                            <i class="fas fa-user fa-fw"></i>
-                            John Doe
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/Computer-Science/" class="post-category">
+                                    Computer Science
+                                </a>
+                            
                             
                         </span>
                     </div>
@@ -1163,8 +1149,12 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
                 
                 <div class="card-action article-tags">
                     
-                    <a href="/tags/Distributed-System-MIT6-824/">
-                        <span class="chip bg-color">-Distributed System -MIT6.824</span>
+                    <a href="/tags/Distributed-System/">
+                        <span class="chip bg-color">Distributed System</span>
+                    </a>
+                    
+                    <a href="/tags/MIT6-824/">
+                        <span class="chip bg-color">MIT6.824</span>
                     </a>
                     
                 </div>
@@ -1361,7 +1351,7 @@ Status <span class="token class-name">DB</span><span class="token double-colon p
                 <span id="year">2019-2022</span>
             
             <span id="year">2019</span>
-            <a href="/about" target="_blank">John Doe</a>
+            <a href="/about" target="_blank"></a>
             |&nbsp;Powered by&nbsp;<a href="https://hexo.io/" target="_blank">Hexo</a>
             |&nbsp;Theme&nbsp;<a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank">Matery</a>
             <br>
@@ -1583,6 +1573,23 @@ $(function () {
     
     <script src="/libs/instantpage/instantpage.js" type="module"></script>
     
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<!--<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
 
 </body>
 

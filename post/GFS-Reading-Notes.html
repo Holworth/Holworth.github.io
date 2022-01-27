@@ -500,8 +500,7 @@
 <p>To maintain the filesystem metadata and execute operation logic, one monitoring machine is always needed. In some systems, this monitor machine is responsible for parsing request and all following work, including communicating with server storing file data and dealing with any exception. Monitor machine often becomes a bottleneck in such system as a result. However, GFS does not do it in the same way.</p>
 <hr>
 <h2 id="System-Design"><a href="#System-Design" class="headerlink" title="System Design"></a>System Design</h2><h3 id="System-structure"><a href="#System-structure" class="headerlink" title="System structure"></a>System structure</h3><p>The overall structure of GFS is as follows:</p>
-<img src="/post/GFS-Reading-Notes/GFSFig1.png" width="90%">
-
+<p><img src="/post/GFS-Reading-Notes/GFSFig1.png" width="90%"></p>
 <p>There are a few key points of GFS:</p>
 <ul>
 <li>There is a <strong>single master machine</strong> that maintains meta data of the whole file system, including file name and mapping table to corresponding chunk (talk about later).</li>
@@ -526,8 +525,7 @@
 <li>Primary server execute write locally and notifies other secondary servers to do the same thing, wait until secondary servers reply.</li>
 <li>Primary replies to client with a success message if all secondary servers finish the operation, otherwise returns error.</li>
 </ul>
-<img src="/post/GFS-Reading-Notes/GFSFig2.png" width="40%">
-
+<p><img src="/post/GFS-Reading-Notes/GFSFig2.png" width="40%"></p>
 <p>If one write operation is returned sucessfully, the reader is supposed to see the same contents no matter which chunk server it’s reading. However, if write fails, some chunk server may have fully executed write while others may not (They may also do it but reply message is lot due to network ), leaving chunk servers inconsistent.</p>
 <hr>
 <h3 id="Consistence"><a href="#Consistence" class="headerlink" title="Consistence"></a>Consistence</h3><p>The GFS system defines two status of a chunk: <strong>consistent</strong> and <strong>Defined</strong>.</p>
@@ -575,7 +573,7 @@
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="/about" rel="external nofollow noreferrer">John Doe</a>
+                    <a href="/about" rel="external nofollow noreferrer"></a>
                 </span>
             </div>
             <div class="reprint__type">
@@ -598,7 +596,7 @@
                     本博客所有文章除特別声明外，均采用
                     <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
                     许可协议。转载请注明来源
-                    <a href="/about" target="_blank">John Doe</a>
+                    <a href="/about" target="_blank"></a>
                     !
                 </span>
             </div>
@@ -823,8 +821,12 @@
                         </span>
                         <span class="publish-author">
                             
-                            <i class="fas fa-user fa-fw"></i>
-                            John Doe
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/Computer-Science/" class="post-category">
+                                    Computer Science
+                                </a>
+                            
                             
                         </span>
                     </div>
@@ -832,8 +834,12 @@
                 
                 <div class="card-action article-tags">
                     
-                    <a href="/tags/Distributed-System-MIT6-824/">
-                        <span class="chip bg-color">-Distributed System -MIT6.824</span>
+                    <a href="/tags/Distributed-System/">
+                        <span class="chip bg-color">Distributed System</span>
+                    </a>
+                    
+                    <a href="/tags/MIT6-824/">
+                        <span class="chip bg-color">MIT6.824</span>
                     </a>
                     
                 </div>
@@ -869,7 +875,7 @@
                         <span class="publish-author">
                             
                             <i class="fas fa-user fa-fw"></i>
-                            John Doe
+                            
                             
                         </span>
                     </div>
@@ -1079,7 +1085,7 @@
                 <span id="year">2019-2022</span>
             
             <span id="year">2019</span>
-            <a href="/about" target="_blank">John Doe</a>
+            <a href="/about" target="_blank"></a>
             |&nbsp;Powered by&nbsp;<a href="https://hexo.io/" target="_blank">Hexo</a>
             |&nbsp;Theme&nbsp;<a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank">Matery</a>
             <br>
@@ -1301,6 +1307,23 @@ $(function () {
     
     <script src="/libs/instantpage/instantpage.js" type="module"></script>
     
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<!--<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
 
 </body>
 

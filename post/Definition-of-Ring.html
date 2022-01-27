@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="keywords" content="BigTable Reading Notes, Hexo">
+    <meta name="keywords" content="Definition of Ring, Hexo">
     <meta name="description" content="">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -16,7 +16,7 @@
     <!-- Global site tag (gtag.js) - Google Analytics -->
 
 
-    <title>BigTable Reading Notes | Hexo</title>
+    <title>Definition of Ring | Hexo</title>
     <link rel="icon" type="image/png" href="/favicon.png">
 
     <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.css">
@@ -310,12 +310,12 @@
 
 
 
-<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/21.jpg')">
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/20.jpg')">
     <div class="container" style="right: 0px;left: 0px;">
         <div class="row">
             <div class="col s12 m12 l12">
                 <div class="brand">
-                    <h1 class="description center-align post-title">BigTable Reading Notes</h1>
+                    <h1 class="description center-align post-title">Definition of Ring</h1>
                 </div>
             </div>
         </div>
@@ -431,12 +431,12 @@
                     
                     <div class="article-tag">
                         
-                            <a href="/tags/Distributed-System/">
-                                <span class="chip bg-color">Distributed System</span>
+                            <a href="/tags/Ring-Theory/">
+                                <span class="chip bg-color">Ring Theory</span>
                             </a>
                         
-                            <a href="/tags/MIT6-824/">
-                                <span class="chip bg-color">MIT6.824</span>
+                            <a href="/tags/AlgebraChapter0/">
+                                <span class="chip bg-color">AlgebraChapter0</span>
                             </a>
                         
                     </div>
@@ -447,8 +447,8 @@
                     <div class="post-cate">
                         <i class="fas fa-bookmark fa-fw icon-category"></i>
                         
-                            <a href="/categories/Computer-Science/" class="post-category">
-                                Computer Science
+                            <a href="/categories/Mathematics/" class="post-category">
+                                Mathematics
                             </a>
                         
                     </div>
@@ -460,7 +460,7 @@
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
-                    2022-01-26
+                    2022-01-27
                 </div>
                 
 
@@ -484,46 +484,106 @@
 
         <div class="card-content article-card-content">
             <div id="articleContent">
-                <h1 id="Bigtable-A-Distributed-Storage-System-for-Structured-Data"><a href="#Bigtable-A-Distributed-Storage-System-for-Structured-Data" class="headerlink" title="Bigtable: A Distributed Storage System for Structured Data"></a>Bigtable: A Distributed Storage System for Structured Data</h1><h2 id="What-is-Bigtable"><a href="#What-is-Bigtable" class="headerlink" title="What is Bigtable?"></a>What is Bigtable?</h2><p>The title of this paper might be a little confusing since it contains two key words “Table” and “Structured Data”. One may refer Bigtable as a distributed relational database system but it’s actually not. The paper has defined BigTable explicitly: </p>
-<blockquote>
-<p>A Bigtable is a <strong>sparse</strong>, <strong>distributed</strong>, <strong>persistent</strong> multidimensional <strong>sorted map</strong>. The map is indexed by a row key, column key, and a timestamp; each value in the map is an uninterpreted array of bytes.</p>
-</blockquote>
-<p>You may treat BigTable simply as a distributed sorted map but also supports structured data storage interface. It is “sparse” because it’s quite different from standard relational model:</p>
-<p><img src="/post/BigTable-Reading-Notes/RelationalModelExample.png" width="90%"></p>
-<p>In standard relational model, each record(row) contains multiple fields(column) and typically all fields contain useful message. However, in BigTable model, each record may have or may not have a data for a specified column. Thus, it’s sparse in this sense.</p>
-<h3 id="Data-Model"><a href="#Data-Model" class="headerlink" title="Data Model"></a>Data Model</h3><p>As discussed above, BigTable is basically a key-value map in the following form:</p>
-<pre class="line-numbers language-none"><code class="language-none">&lt;row_key, column_key, timestamp&gt; -&gt; value<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-<p>The key is triple consists of <strong>row_key, column_key, timestamp</strong>.</p>
+                <h2 id="Definition-of-ring-and-examples"><a href="#Definition-of-ring-and-examples" class="headerlink" title="Definition of ring and examples"></a>Definition of ring and examples</h2><h3 id="3-1-1-The-basic-motivation-mbox-End-G"><a href="#3-1-1-The-basic-motivation-mbox-End-G" class="headerlink" title="3.1.1 The basic motivation: $\mbox{End}(G)$"></a>3.1.1 The basic motivation: $\mbox{End}(G)$</h3><p>The basic motivation of introduction of ring is the $\mbox{Hom}_{\mathbf{Ab}}(G, G)$(or simply $\mbox{End}(G)$), that is, the set of all endmorphism over an abelian group $G$. We can define the so called addition over this set as follows:</p>
+<script type="math/tex; mode=display">
+(\forall f,g\in \mbox{End}(G): (f+g)(a) = f(a) + g(a)</script><p>It’s easy to show that $\mbox{End}(G)$ forms an abelian group  if $G$ is abelian. One thing to rememebr is that not any general group $G$ satisfies $\mbox{End}(G)$ is an abelian group. The key point is that the above-defined $f+g$ might not be a group homomorphism if $G$ is not abelian:</p>
+<script type="math/tex; mode=display">
+\begin{aligned}
+(\forall f,g\in \mbox{End}(G), a,b\in G):\\(f+g)(a+b) &= f(a+b) + g(a+b)\\
+&= f(a) + f(b) + g(a) + g(b)\\
+&\xlongequal{G\;is\;abelian} f(a) + g(a) + f(b) + g(b)\\
+&= (f+g)(a) + (f+g)(b)
+\end{aligned}</script><p>In conclusion, $\mbox{End}(G)$ forms an abelian group under homomorphism addition. However, there is another type of operation: <strong>Composition of homomorphisms</strong></p>
+<script type="math/tex; mode=display">
+(f,g\in \mbox{End}(G)): (f\circ g)(a) = f(g(a))</script><p>Thus, there are two kinds of different operations within set $\mbox{End}(G)$. That’s the basic motivation of a new algebra structure, called <em>ring</em>.</p>
+<h3 id="3-1-2-Definition-of-ring"><a href="#3-1-2-Definition-of-ring" class="headerlink" title="3.1.2 Definition of ring"></a>3.1.2 Definition of ring</h3><p>A ring $(R, +, ·)$ is an abelian group $(R, +)$ endowed with a second binary operation$·$(often omit this dot notion), satisfying of its own the requirements of being associative and having a two-sided identity:</p>
 <ul>
-<li><strong>row_key</strong> is similar to <strong>primary key</strong> in relational model, it uniquely identifies one record.  row_key is a string which has size of no <strong>more than 64KB</strong>.</li>
-<li><strong>column_key</strong> is similar to <strong>field</strong> in relational model, it depicts the record’s value at speicific attribute. A column_key is specified by a <em>column family</em> and <em>qualifier</em> combination.<ul>
-<li><strong>Column family</strong> is a group of column keys. Just as table schema in relational model, you have to create it before storing data with column keys belong to this family. However, the difference is once the column family is created, you don’t need to explicitly create column keys within this group, instead, you add column keys into this group by dynamically inserting records.</li>
+<li><em>Associativity</em>: $(\forall r,s,t\in R):(rs)t=r(st)$</li>
+<li><em>Existence of Identity:</em> $(\exists 1_{R}\in R)(\forall r\in R):1_{R}r=r1_{R} = r$</li>
 </ul>
+<p>Also, there are laws combining two different operations, called <em>distributive law</em>:</p>
+<ul>
+<li>$(\forall r,s,t\in R): r(s+t) = rs+rt, (r+s)t = rt+st$<br>The operation $+$ and $\cdot$ are called addition and multiplication resepctively. </li>
+</ul>
+<p>Here are one point to note : </p>
+<ul>
+<li>Within this book, a ring is always to be considered have <strong>multiplication identity</strong>. Some other definition may <em>not require</em> a ring to have an identity. </li>
+</ul>
+<h4 id="Examples-of-rings"><a href="#Examples-of-rings" class="headerlink" title="Examples of rings"></a>Examples of rings</h4><ul>
+<li><p><strong>Trivial ring.</strong>  There is only one element $\{0\}$, which is the addition identity.</p>
 </li>
-<li><strong>timestamp</strong> is for version control, it’s denoted as a 8B integer.</li>
+<li><p><strong>Integer ring.</strong>  $(\mathbb{Z}, +, \times)$ forms a ring, where addition and multiplication are naturally integer addition and multiplication.</p>
+</li>
+<li><p><strong>Modular ring.</strong>  The addition group $\mathbb{Z}/n\mathbb{Z}$ forms a ring. The addition and multiplication is modular addition and multiplication. </p>
+</li>
+<li><p><strong>Matrix ring.</strong>  Square matrix of order $n$ forms a ring, the addition and multiplication are matrix addition and multiplication.</p>
+</li>
 </ul>
-<p>One example of above concepts is the webpage example in original paper:</p>
-<p><img src="/post/BigTable-Reading-Notes/BigTableFig1.png" width="90%"></p>
-<p>This picture depicts a logic view of a table storing webpages. The picked row, specified by row_key of <code>com.cnn.www</code>, has three column keys: <code>contents, anchor:cnnsi.com, anchor:my.look.ca</code>. Thus, this table (within view of this pic) has two column families: <code>contents</code> and <code>anchor</code>. The <code>t3, t5, t6</code> specifies different version. BigTable system allows user to configure the number of versions available and automatically garbage-collect other versions.</p>
-<p>Each triple is mapped into some value, for example:</p>
-<pre class="line-numbers language-none"><code class="language-none">&lt;&quot;com.cnn.www&quot;, &quot;anchor:cnnsi.com&quot;, t9&gt; -&gt; &quot;CNN&quot;<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-<hr>
-<h2 id="System-Designs"><a href="#System-Designs" class="headerlink" title="System Designs"></a>System Designs</h2><h3 id="Overview"><a href="#Overview" class="headerlink" title="Overview"></a>Overview</h3><p>Since BigTable is a distributed sorted map, there are some basic questions to ask:</p>
+<p>Though we list a few examples of rings, they are completely different. There are some rings with special properties to discover.</p>
+<h3 id="3-1-3-Rings-with-special-properties"><a href="#3-1-3-Rings-with-special-properties" class="headerlink" title="3.1.3 Rings with special properties"></a>3.1.3 Rings with special properties</h3><h4 id="Commutative-ring"><a href="#Commutative-ring" class="headerlink" title="Commutative ring"></a>Commutative ring</h4><p><strong>Definition (commutative ring).</strong>  A ring $R$ is commutative, if  multiplication is commutative, that is </p>
+<script type="math/tex; mode=display">(\forall r,s\in R):\quad rs = sr</script><p>$R$ is called commutative ring under in such case.</p>
+<p>In our examples, $\mathbb{Z}, \mathbb{Z}/n\mathbb{Z}$ are commutative rings. But matrix ring is not. </p>
+<h4 id="Zero-divisors-and-Integral-domain"><a href="#Zero-divisors-and-Integral-domain" class="headerlink" title="Zero divisors and Integral domain"></a>Zero divisors and Integral domain</h4><p><strong>Definition (zero divisor).</strong> Let $R$ be a ring, and an element $r\in R$ is a <em>left(resp.right) zero-divisor</em>, if $\exists s\in R, s\neq0 \;\mbox{and}\;rs = 0(sr=0)$.</p>
+<p>The following proposition depicts the property of a zero-divisor:</p>
+<p><strong>Proposition.</strong> Let $R$ be a ring and $r\in R$ is an element. The following statements are equavialent:</p>
 <ul>
-<li>How to shard this map and distribute them among thousands of machines.</li>
-<li>How could a client interact with this system, for example, send read or write requests</li>
-<li>How to guarantee fault tolerance?</li>
+<li>$r$ is <strong>not</strong> a left zero divisor.</li>
+<li>Function: $f:R\longrightarrow R, a\mapsto ra$ is injective.</li>
 </ul>
-<p>We first shows the overview structure of BigTable system to answer above questions.</p>
-<p><img src="/post/BigTable-Reading-Notes/BigTableOverviewStruct.png" width="85%"></p>
-<p>Let’s first introduce the overall structure of Bigtable. As for logic view, BigTable is a table which dynamically maintains sorted key-value map. To deploy this map among a cluster, BigTable sharded the whole table into mutliple <strong>tablets</strong> by <strong>grouping sorted row keys</strong>. According to the paper description, a tablet is the unit of distribution and load-balancing.</p>
-<p>Different tablets are assigned to different servers to provide services. The assignment is done by <strong>master</strong> server and is managed by chubby service. Once this assignment is done, the client will ask the chubby server for the location of target tablet and then directly communicate with target tablet server.</p>
-<p>The tablet storage depends on <strong>GFS</strong> to <strong>achive fault tolerance</strong> (Three-replicas) and high performance. BigTable uses GFS to store <strong>immutable SSTable files</strong> generated by tablet server during insertion/updating/deletion operation requested by clients. In addition, WAL (Write Ahead Log) is stored in GFS and accessed during tablet server recovery.</p>
-<h2 id="Expressions"><a href="#Expressions" class="headerlink" title="Expressions"></a>Expressions</h2><blockquote>
-<p>We settled on this data model after examining a variety of potential uses of a Bigtable-like system</p>
-</blockquote>
-<p>翻译：”settle on” 意为定下，这里翻译是”在检视了各种bigtable系统可能的用途之后，我们最终定下了这个数据模型“</p>
-
+<p>It is easy to prove the proposition and the right zero divisor case. By the definiton of $R$, we give the following definiton of integral domain:</p>
+<p><strong>Definition (Integral domain).</strong> A ring $R$ is called integral domain, if it is <em>commutative</em> and has <em>no zero-divisors</em>, i.e. </p>
+<script type="math/tex; mode=display">
+(\forall a,b\in R)\quad ab=0\Longrightarrow a=0\;\mbox{or}\;b=0</script><p>According to the definiton of integral domain and the property of zero-divisors We have the <em>cancellation law</em> holds:</p>
+<p><strong>(Cancellation)</strong> If $R$ is an integral domain, then:</p>
+<script type="math/tex; mode=display">
+(\forall a,b,c\in R, a\neq 0):\quad
+ab=ac\Longrightarrow b =c</script><p>That is, in integral domain we can simply cut off the same component in a multiplication expression, which is the same as we do in group.</p>
+<h5 id="Examples"><a href="#Examples" class="headerlink" title="Examples"></a>Examples</h5><p>$\mathbb{Z}$ is an integral domain. However, both $Z/n\mathbb{Z}$ and matrix ring are not integral domain in general case.<br>For example, in matrix ring of order 2, we have:</p>
+<script type="math/tex; mode=display">
+\begin{pmatrix}
+1 & 0\\
+0 & 0
+\end{pmatrix}
+\begin{pmatrix}
+0 & 0\\
+0 & 1
+\end{pmatrix}
+= \begin{pmatrix}
+0 & 0\\
+0 & 0
+\end{pmatrix}</script><p>In $\mathbb{Z}/6\mathbb{Z}$, we have $[2]_{6}\times[3]_{6}=[0]_{6}$. Thus $\mathbb{Z}/6\mathbb{Z}$ is not an integral domain.</p>
+<p>However, there is a class of $n$ that makes $\mathbb{Z}/n\mathbb{Z}$ integral domain, in particular, they are actually field. </p>
+<h4 id="Unit-and-division-ring"><a href="#Unit-and-division-ring" class="headerlink" title="Unit and division ring"></a>Unit and division ring</h4><p><strong>Definion(Unit).</strong> Let $R$ be a ring and an element $r\in R$. $r$ is called a left(resp. right) unit if $\exists v\in R, uv=1(\mbox{resp.}\;vu=1)$. $r$ is an unit if it is both left and right side unit.</p>
+<p>Similar to zero divisor, we given a depiction of unit as the following proposition:</p>
+<p><strong>Proposition:</strong> Let $R$ be a ring and $r\in R$. </p>
+<ul>
+<li>$r\;\mbox{is a left unit}\Longleftrightarrow f:R\longrightarrow R,a\mapsto ra\;\mbox{is surjective}$</li>
+<li>$r\;\mbox{is a left unit}\Longrightarrow r\;\mbox{is not a right zero-divisor}$</li>
+<li>$\mbox{The inverse of two-sided unit is unique}$</li>
+<li>$\mbox{The set of all two-sided unit forms a group}$.</li>
+</ul>
+<p>The proof of above propositions are easy. For the third proposition we could actually prove that if $r$ is a two sided unit, then the left-inverse and right inverse equals. </p>
+<script type="math/tex; mode=display">
+u = u1 = u(rv) = (ur)v = 1v = v</script><p>That’s why we can use the word $\textit{inverse}$ to denote both left and right inverse.</p>
+<p><strong>Definition(division ring and field).</strong> A <em>division ring</em> is a ring in which every non-zero element is an unit. A <em>field</em> is a non-zero commutative division ring.</p>
+<p>It’s obviously that both $\mathbb{Q}, \mathbb{R}$ are fields. The following theorem implies a class of special modular group:</p>
+<p><strong>Theorem.</strong> $\mathbb{Z}/n\mathbb{Z}$ is field if and only  if $n$ is a prime.</p>
+<p>$\textit{Hint}.$ We only need to show that $[a]_{n}$ is unit if and only if $\mbox{gcd}(a, n) = 1$. </p>
+<p><strong>Theorem.</strong> $R$ is a finite commutative ring, then $R$ is field if and ony if $R$ is integral domain.<br>$\textit{Hint}.$ Field is naturally an integral domain. If $R$ is an integral domain, prove that each $r\in R$ is unit by considering the left multiplication function. It must map some element to 1 since $R$ is finite and this map is injective.</p>
+<h3 id="3-1-4-Other-examples-of-rings"><a href="#3-1-4-Other-examples-of-rings" class="headerlink" title="3.1.4 Other examples of rings"></a>3.1.4 Other examples of rings</h3><h4 id="Polynomial-rings"><a href="#Polynomial-rings" class="headerlink" title="Polynomial rings"></a>Polynomial rings</h4><p>Let $R$ be a ring and define a polynomial $f(x)$ over $R$ as the following form:</p>
+<script type="math/tex; mode=display">
+f(x) = \sum_{i\geq 0}a_ix^{i} = a_0+ a_1x+a_2x^{2}+\cdots</script><p>Note that each $f(x)$ only has finitely many summation. The set of all $f(x)$ is a ring, called Polynomial ring over $R$, denoted as $R[x]$. </p>
+<p><strong>Definition(Degree).</strong> Let $f(x)\in R[x]$, the degree of $f(x)$, denoted as $\mbox{deg}f$, is the maximum $n$ such that $a_{n}\neq 0$.  Typically we define $\mbox{deg}r = 0, r\in R$ and $\mbox{deg}0 = -\infty$.</p>
+<p>When $R$ is an integral domain, $R[x]$ is also an integral domain. And the following equation holds:</p>
+<script type="math/tex; mode=display">
+\mbox{deg}(fg) = \mbox{deg}f + \mbox{deg}g</script><h4 id="Monoid-rings"><a href="#Monoid-rings" class="headerlink" title="Monoid rings"></a>Monoid rings</h4><p>Monoid rings is a ring constructed from a monoid and a ring. Here is the definition:<br><strong>Definition(Monoid rings).</strong> Let $R$ be a ring and $M$ a monoid, then consider all the following linear combinations:</p>
+<script type="math/tex; mode=display">
+\sum_{m\in M}a_{m}\cdot m, a_{m}\in R</script><p>Where only finitely many $a_{m}\neq 0$. The addition and multiplication are defined as follows:</p>
+<script type="math/tex; mode=display">
+\begin{aligned}
+\sum_{m\in M}a_{m}\cdot m+\sum_{m\in M}b_{m}\cdot m &= \sum_{m\in M}(a_m+b_m)\cdot m\\
+(\sum_{m\in M}a_{m}\cdot m)(\sum_{m\in M}b_{m}\cdot m) &=\sum_{m\in M}(\sum_{m_1m_2=m}a_{m_1}b_{m_2})m
+\end{aligned}</script>
                 
             </div>
             <hr/>
@@ -539,7 +599,7 @@
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="/about" rel="external nofollow noreferrer">Azrael</a>
+                    <a href="/about" rel="external nofollow noreferrer">Holworth</a>
                 </span>
             </div>
             <div class="reprint__type">
@@ -549,7 +609,7 @@
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="https://Holworth.github.io/post/BigTable-Reading-Notes.html">https://Holworth.github.io/post/BigTable-Reading-Notes.html</a>
+                    <a href="https://Holworth.github.io/post/Definition-of-Ring.html">https://Holworth.github.io/post/Definition-of-Ring.html</a>
                 </span>
             </div>
             <div class="reprint__notice">
@@ -562,7 +622,7 @@
                     本博客所有文章除特別声明外，均采用
                     <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
                     许可协议。转载请注明来源
-                    <a href="/about" target="_blank">Azrael</a>
+                    <a href="/about" target="_blank">Holworth</a>
                     !
                 </span>
             </div>
@@ -587,12 +647,12 @@
                     
                         <div class="article-tag">
                             
-                                <a href="/tags/Distributed-System/">
-                                    <span class="chip bg-color">Distributed System</span>
+                                <a href="/tags/Ring-Theory/">
+                                    <span class="chip bg-color">Ring Theory</span>
                                 </a>
                             
-                                <a href="/tags/MIT6-824/">
-                                    <span class="chip bg-color">MIT6.824</span>
+                                <a href="/tags/AlgebraChapter0/">
+                                    <span class="chip bg-color">AlgebraChapter0</span>
                                 </a>
                             
                         </div>
@@ -762,9 +822,64 @@
 <article id="prenext-posts" class="prev-next articles">
     <div class="row article-row">
         
-        <div class="article col s12 m6" data-aos="fade-up">
+        <div class="article col s12 m6" data-aos="fade-up" data-aos="fade-up">
             <div class="article-badge left-badge text-color">
-                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+                <i class="far fa-dot-circle"></i>&nbsp;本篇
+            </div>
+            <div class="card">
+                <a href="/post/Definition-of-Ring.html">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/20.jpg" class="responsive-img" alt="Definition of Ring">
+                        
+                        <span class="card-title">Definition of Ring</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-01-27
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/Mathematics/" class="post-category">
+                                    Mathematics
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/Ring-Theory/">
+                        <span class="chip bg-color">Ring Theory</span>
+                    </a>
+                    
+                    <a href="/tags/AlgebraChapter0/">
+                        <span class="chip bg-color">AlgebraChapter0</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
             <div class="card">
                 <a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-DB%E6%8E%A5%E5%8F%A3.html">
                     <div class="card-image">
@@ -782,9 +897,9 @@
                         
                     </div>
                     <div class="publish-info">
-                        <span class="publish-date">
-                            <i class="far fa-clock fa-fw icon-date"></i>2022-01-26
-                        </span>
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-01-26
+                            </span>
                         <span class="publish-author">
                             
                             <i class="fas fa-bookmark fa-fw icon-category"></i>
@@ -810,55 +925,6 @@
                     
                     <a href="/tags/KV/">
                         <span class="chip bg-color">KV</span>
-                    </a>
-                    
-                </div>
-                
-            </div>
-        </div>
-        
-        
-        <div class="article col s12 m6" data-aos="fade-up">
-            <div class="article-badge right-badge text-color">
-                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
-            </div>
-            <div class="card">
-                <a href="/post/GFS-Reading-Notes.html">
-                    <div class="card-image">
-                        
-                        
-                        <img src="/medias/featureimages/15.jpg" class="responsive-img" alt="GFS Reading Notes">
-                        
-                        <span class="card-title">GFS Reading Notes</span>
-                    </div>
-                </a>
-                <div class="card-content article-content">
-                    <div class="summary block-with-text">
-                        
-                            
-                        
-                    </div>
-                    <div class="publish-info">
-                            <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2022-01-25
-                            </span>
-                        <span class="publish-author">
-                            
-                            <i class="fas fa-user fa-fw"></i>
-                            
-                            
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="card-action article-tags">
-                    
-                    <a href="/tags/Distributed-System/">
-                        <span class="chip bg-color">Distributed System</span>
-                    </a>
-                    
-                    <a href="/tags/MIT6-824/">
-                        <span class="chip bg-color">MIT6.824</span>
                     </a>
                     
                 </div>
@@ -989,6 +1055,13 @@
 
 </main>
 
+
+<script src="https://cdn.bootcss.com/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script>
+    MathJax.Hub.Config({
+        tex2jax: {inlineMath: [['$', '$'], ['\(', '\)']]}
+    });
+</script>
 
 
 
