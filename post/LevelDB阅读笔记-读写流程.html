@@ -1,0 +1,1555 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="LevelDB阅读笔记:读写流程, Hexo">
+    <meta name="description" content="DB内部读写流程上一节已经说过，class DB只是提供接口功能的抽象基类，leveldb通过DBImpl类来实现具体的接口功能：
+// db_impl.h
+class DBImpl : public DB &amp;#123;
+  ...
+&amp;#1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+    <title>LevelDB阅读笔记:读写流程 | Hexo</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+
+    <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
+    <link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+    <link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+    <link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+    <link rel="stylesheet" type="text/css" href="/css/matery.css">
+    <link rel="stylesheet" type="text/css" href="/css/my.css">
+
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+
+
+
+<body>
+    <header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="/" class="waves-effect waves-light">
+                    
+                    <img src="/medias/logo.png" class="logo-img" alt="LOGO">
+                    
+                    <span class="logo-span">Hexo</span>
+                </a>
+            </div>
+            
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/" class="waves-effect waves-light">
+      
+      <i class="fas fa-home" style="zoom: 0.6;"></i>
+      
+      <span>首页</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/tags" class="waves-effect waves-light">
+      
+      <i class="fas fa-tags" style="zoom: 0.6;"></i>
+      
+      <span>标签</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/categories" class="waves-effect waves-light">
+      
+      <i class="fas fa-bookmark" style="zoom: 0.6;"></i>
+      
+      <span>分类</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/archives" class="waves-effect waves-light">
+      
+      <i class="fas fa-archive" style="zoom: 0.6;"></i>
+      
+      <span>归档</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/about" class="waves-effect waves-light">
+      
+      <i class="fas fa-user-circle" style="zoom: 0.6;"></i>
+      
+      <span>关于</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/contact" class="waves-effect waves-light">
+      
+      <i class="fas fa-comments" style="zoom: 0.6;"></i>
+      
+      <span>留言板</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/friends" class="waves-effect waves-light">
+      
+      <i class="fas fa-address-book" style="zoom: 0.6;"></i>
+      
+      <span>友情链接</span>
+    </a>
+    
+  </li>
+  
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="搜索" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/medias/logo.png" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">Hexo</div>
+        <div class="logo-desc">
+            
+            Never really desperate, only the lost of the soul.
+            
+        </div>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li class="m-nav-item">
+	  
+		<a href="/" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-home"></i>
+			
+			首页
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/tags" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-tags"></i>
+			
+			标签
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/categories" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-bookmark"></i>
+			
+			分类
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/archives" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-archive"></i>
+			
+			归档
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/about" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-user-circle"></i>
+			
+			关于
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/contact" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-comments"></i>
+			
+			留言板
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/friends" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-address-book"></i>
+			
+			友情链接
+		</a>
+          
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/blinkfox/hexo-theme-matery" class="waves-effect waves-light" target="_blank">
+                <i class="fab fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+</div>
+
+
+        </div>
+
+        
+            <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/blinkfox/hexo-theme-matery" class="github-corner tooltipped hide-on-med-and-down" target="_blank"
+   data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewBox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor" class="octo-body"></path>
+    </svg>
+</a>
+        
+    </nav>
+
+</header>
+
+    
+
+
+
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/10.jpg')">
+    <div class="container" style="right: 0px;left: 0px;">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <h1 class="description center-align post-title">LevelDB阅读笔记:读写流程</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<main class="post-container content">
+
+    
+    <link rel="stylesheet" href="/libs/tocbot/tocbot.css">
+<style>
+    #articleContent h1::before,
+    #articleContent h2::before,
+    #articleContent h3::before,
+    #articleContent h4::before,
+    #articleContent h5::before,
+    #articleContent h6::before {
+        display: block;
+        content: " ";
+        height: 100px;
+        margin-top: -100px;
+        visibility: hidden;
+    }
+
+    #articleContent :focus {
+        outline: none;
+    }
+
+    .toc-fixed {
+        position: fixed;
+        top: 64px;
+    }
+
+    .toc-widget {
+        width: 345px;
+        padding-left: 20px;
+    }
+
+    .toc-widget .toc-title {
+        padding: 35px 0 15px 17px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        line-height: 1.5rem;
+    }
+
+    .toc-widget ol {
+        padding: 0;
+        list-style: none;
+    }
+
+    #toc-content {
+        padding-bottom: 30px;
+        overflow: auto;
+    }
+
+    #toc-content ol {
+        padding-left: 10px;
+    }
+
+    #toc-content ol li {
+        padding-left: 10px;
+    }
+
+    #toc-content .toc-link:hover {
+        color: #42b983;
+        font-weight: 700;
+        text-decoration: underline;
+    }
+
+    #toc-content .toc-link::before {
+        background-color: transparent;
+        max-height: 25px;
+
+        position: absolute;
+        right: 23.5vw;
+        display: block;
+    }
+
+    #toc-content .is-active-link {
+        color: #42b983;
+    }
+
+    #floating-toc-btn {
+        position: fixed;
+        right: 15px;
+        bottom: 76px;
+        padding-top: 15px;
+        margin-bottom: 0;
+        z-index: 998;
+    }
+
+    #floating-toc-btn .btn-floating {
+        width: 48px;
+        height: 48px;
+    }
+
+    #floating-toc-btn .btn-floating i {
+        line-height: 48px;
+        font-size: 1.4rem;
+    }
+</style>
+<div class="row">
+    <div id="main-content" class="col s12 m12 l9">
+        <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            <div class="row tag-cate">
+                <div class="col s7">
+                    
+                    <div class="article-tag">
+                        
+                            <a href="/tags/LevelDB/">
+                                <span class="chip bg-color">LevelDB</span>
+                            </a>
+                        
+                            <a href="/tags/C/">
+                                <span class="chip bg-color">C++</span>
+                            </a>
+                        
+                            <a href="/tags/KV/">
+                                <span class="chip bg-color">KV</span>
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+                <div class="col s5 right-align">
+                    
+                    <div class="post-cate">
+                        <i class="fas fa-bookmark fa-fw icon-category"></i>
+                        
+                            <a href="/categories/Coding/" class="post-category">
+                                Coding
+                            </a>
+                        
+                            <a href="/categories/Coding/Database/" class="post-category">
+                                Database
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div class="post-info">
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
+                    2022-02-16
+                </div>
+                
+
+                
+
+                
+
+                
+
+                
+            </div>
+        </div>
+        <hr class="clearfix">
+
+        
+        <!-- 是否加载使用自带的 prismjs. -->
+        <link rel="stylesheet" href="/libs/prism/prism.css">
+        
+
+        
+
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h1 id="DB内部读写流程"><a href="#DB内部读写流程" class="headerlink" title="DB内部读写流程"></a>DB内部读写流程</h1><p>上一节已经说过，<code>class DB</code>只是提供接口功能的抽象基类，leveldb通过<code>DBImpl</code>类来实现具体的接口功能：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// db_impl.h</span>
+<span class="token keyword">class</span> <span class="token class-name">DBImpl</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">DB</span></span> <span class="token punctuation">&#123;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>出于简单考虑，本节只会分析读写流程，并且由于这部分涉及到很多其他组件的实现，我们并不能将所有实现细节完全讲出，而只能给出一个大概的执行过程。但这一部分毫无疑问是阅读其他代码组件的基础，正是从接口实现出发，我们可以沿着这一条主线前进，并且在遇到涉及其他组件的时候阅读其内部实现细节，从而建立对leveldb的整体认识。尽管这种方法不一定最好，但对于我这类初学者来说，应该是最容易想到和实施的方法了。</p>
+<p><code>DBImpl</code>的<code>Put</code>,<code>Delete</code>对原始的接口进行了override，如下所示：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">class</span> <span class="token class-name">DBImpl</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">DB</span></span> <span class="token punctuation">&#123;</span>
+  <span class="token function">DBImpl</span><span class="token punctuation">(</span><span class="token keyword">const</span> Options<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> <span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>string<span class="token operator">&amp;</span> dbname<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token function">DBImpl</span><span class="token punctuation">(</span><span class="token keyword">const</span> DBImpl<span class="token operator">&amp;</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token keyword">delete</span><span class="token punctuation">;</span>
+  DBImpl<span class="token operator">&amp;</span> <span class="token keyword">operator</span><span class="token operator">=</span><span class="token punctuation">(</span><span class="token keyword">const</span> DBImpl<span class="token operator">&amp;</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token keyword">delete</span><span class="token punctuation">;</span>
+
+  <span class="token operator">~</span><span class="token function">DBImpl</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">override</span><span class="token punctuation">;</span>
+  
+  Status <span class="token function">Put</span><span class="token punctuation">(</span><span class="token keyword">const</span> WriteOptions<span class="token operator">&amp;</span><span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> key<span class="token punctuation">,</span>
+             <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> value<span class="token punctuation">)</span> <span class="token keyword">override</span><span class="token punctuation">;</span>
+  Status <span class="token function">Delete</span><span class="token punctuation">(</span><span class="token keyword">const</span> WriteOptions<span class="token operator">&amp;</span><span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> key<span class="token punctuation">)</span> <span class="token keyword">override</span><span class="token punctuation">;</span>
+  Status <span class="token function">Write</span><span class="token punctuation">(</span><span class="token keyword">const</span> WriteOptions<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> WriteBatch<span class="token operator">*</span> updates<span class="token punctuation">)</span> <span class="token keyword">override</span><span class="token punctuation">;</span>
+  Status <span class="token function">Get</span><span class="token punctuation">(</span><span class="token keyword">const</span> ReadOptions<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> key<span class="token punctuation">,</span>
+             std<span class="token double-colon punctuation">::</span>string<span class="token operator">*</span> value<span class="token punctuation">)</span> <span class="token keyword">override</span><span class="token punctuation">;</span>
+	<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="DBImpl写流程：Put与Delete"><a href="#DBImpl写流程：Put与Delete" class="headerlink" title="DBImpl写流程：Put与Delete"></a>DBImpl写流程：Put与Delete</h2><p><code>DBImpl</code>的<code>Put</code>和<code>Delete</code>操作实际上经过了如下调用链：</p>
+<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">&#x2F;&#x2F; db_impl.cc
+&#x2F;&#x2F; Convenience methods
+Status DBImpl::Put(const WriteOptions&amp; o, const Slice&amp; key, const Slice&amp; val) &#123;
+  return DB::Put(o, key, val);
+&#125;
+
+Status DBImpl::Delete(const WriteOptions&amp; options, const Slice&amp; key) &#123;
+  return DB::Delete(options, key);
+&#125;
+
+&#x2F;&#x2F; Default implementations of convenience methods that subclasses of DB
+&#x2F;&#x2F; can call if they wish
+Status DB::Put(const WriteOptions&amp; opt, const Slice&amp; key, const Slice&amp; value) &#123;
+  WriteBatch batch;
+  batch.Put(key, value);
+  return Write(opt, &amp;batch);
+&#125;
+
+Status DB::Delete(const WriteOptions&amp; opt, const Slice&amp; key) &#123;
+  WriteBatch batch;
+  batch.Delete(key);
+  return Write(opt, &amp;batch);
+&#125;
+
+Status DBImpl::Write(const WriteOptions&amp; options, WriteBatch* updates);<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>所以，实际上，<code>DBImpl</code>的Put和Delete都是调用的其基类部分实现，但其基类部分的实现实际上是将操作丢到<code>WriteBatch</code>里面，然后统一用<code>Write</code>来进行处理, (为什么不直接调用<code>DBImpl::Write</code>?为了省查虚表的开销？）所以分析的关键是<code>Write</code>操作。</p>
+<p>整个Write操作可以用下面的这幅图来表示：</p>
+<p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-%E8%AF%BB%E5%86%99%E6%B5%81%E7%A8%8B/DBImplWriteProcess.png"></p>
+<p>一共可以分为四个阶段，这四个阶段实际上也就代表了LevelDB的线程模型。我们对照代码和图来分析：</p>
+<p><strong>第一阶段：写操作将创建Writer并加入到Writer队列中：</strong></p>
+<p>这里，我们提到了<code>Writer</code>,它是一个定义在<code>db_impl.cc</code>文件中的结构，其名为<code>Writer</code>,但我更愿意称之为<code>WriteRequest</code>。其结构定义如下：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">struct</span> <span class="token class-name">DBImpl</span><span class="token operator">:</span><span class="token base-clause"><span class="token operator">:</span><span class="token class-name">Writer</span></span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">explicit</span> <span class="token function">Writer</span><span class="token punctuation">(</span>port<span class="token double-colon punctuation">::</span>Mutex<span class="token operator">*</span> mu<span class="token punctuation">)</span>
+      <span class="token operator">:</span> <span class="token function">batch</span><span class="token punctuation">(</span><span class="token keyword">nullptr</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">sync</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">done</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">cv</span><span class="token punctuation">(</span>mu<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+
+  Status status<span class="token punctuation">;</span>
+  WriteBatch<span class="token operator">*</span> batch<span class="token punctuation">;</span>
+  <span class="token keyword">bool</span> sync<span class="token punctuation">;</span>
+  <span class="token keyword">bool</span> done<span class="token punctuation">;</span>
+  port<span class="token double-colon punctuation">::</span>CondVar cv<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>从逻辑上理解，一个<code>Writer</code>(或request)值得是一次写请求，它包含了写必要的内容：要写入的数据：<code>batch</code>, 一个来自于<code>WriteOption</code>的选项：<code>bool sync</code>,以及一对用于同步的变量：<code>bool done</code>和<code>CondVar cv</code>。</p>
+<p>当线程进行一次写操作时，它将要写的数据以及<code>WriteOption</code>设置到一个<code>Writer</code>上，然后结合条件变量自旋等待该写操作是否完成。这正是<code>Write</code>代码中所做的操作：</p>
+<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">&#x2F;&#x2F; Step1: Add writer(request) to queue
+Writer w(&amp;mutex_);
+w.batch &#x3D; updates;
+w.sync &#x3D; options.sync;
+w.done &#x3D; false;
+
+MutexLock l(&amp;mutex_);
+writers_.push_back(&amp;w);
+while (!w.done &amp;&amp; &amp;w !&#x3D; writers_.front()) &#123;
+  w.cv.Wait();
+&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<p><strong>第二阶段：选出Leader，非Leader的线程自旋等待对应的Writer操作完成</strong></p>
+<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">while (!w.done &amp;&amp; &amp;w !&#x3D; writers_.front()) &#123;
+  w.cv.Wait();
+&#125;
+if (w.done) &#123;
+  return w.status;
+&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>选出Leader(最近Raft看的有点多)的标准是该线程的<code>Writer</code>请求正好位于整个请求队列（<code>writers_</code>）的头部，满足此条件的线程会从上述while循环中离开，进行下一步操作，这也就意味着它已经成了leader，将执行后续的make room以及apply操作。</p>
+<hr>
+<p><strong>第三阶段：MakeRoom</strong></p>
+<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">Status status &#x3D; MakeRoomForWrite(updates &#x3D;&#x3D; nullptr);<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>这一阶段直接调用<code>MakeRoomForWrite</code>函数为接下来要写入的请求分配足够的空间，整个过程会导致数据库内部的一系列变化，例如：immutable memtable的落盘，后台的compaction等等。最后的结果是active的memtable中应当有足够的位置来容纳接下来的batch write。</p>
+<hr>
+<p><strong>第四阶段：建立写入的batch并且apply到memtable中</strong></p>
+<p>（写到这里，我发现这四个阶段的划分并不合理，前三个干的事太少，而最后一个代码又太多；但是从逻辑上来看，最后一个阶段确实可以简单地用apply来概括。。。）</p>
+<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">uint64_t last_sequence &#x3D; versions_-&gt;LastSequence();
+Writer* last_writer &#x3D; &amp;w;
+if (status.ok() &amp;&amp; updates !&#x3D; nullptr) &#123;  &#x2F;&#x2F; nullptr batch is for compactions
+  &#x2F;&#x2F; last_writer要写入的数据并不保存在write_batch中，也就是，它的数据在接下来的apply中并不会写入到
+  &#x2F;&#x2F; memtable中
+  WriteBatch* write_batch &#x3D; BuildBatchGroup(&amp;last_writer);
+  WriteBatchInternal::SetSequence(write_batch, last_sequence + 1);
+  last_sequence +&#x3D; WriteBatchInternal::Count(write_batch);
+
+  &#x2F;&#x2F; Add to log and apply to memtable.  We can release the lock
+  &#x2F;&#x2F; during this phase since &amp;w is currently responsible for logging
+  &#x2F;&#x2F; and protects against concurrent loggers and concurrent writes
+  &#x2F;&#x2F; into mem_.
+  &#123;
+    mutex_.Unlock();
+    &#x2F;&#x2F; 将数据先写入logfile中，即WAL
+    status &#x3D; log_-&gt;AddRecord(WriteBatchInternal::Contents(write_batch));
+    bool sync_error &#x3D; false;
+    if (status.ok() &amp;&amp; W.sync) &#123;	&#x2F;&#x2F; 哦，原来WriteOptions中的sync指的是WAL的sync
+      status &#x3D; logfile_-&gt;Sync();
+      if (!status.ok()) &#123;
+        sync_error &#x3D; true;
+      &#125;
+    &#125;
+    if (status.ok()) &#123;
+      status &#x3D; WriteBatchInternal::InsertInto(write_batch, mem_);
+    &#125;
+    mutex_.Lock();
+    if (sync_error) &#123;
+      &#x2F;&#x2F; The state of the log file is indeterminate: the log record we
+      &#x2F;&#x2F; just added may or may not show up when the DB is re-opened.
+      &#x2F;&#x2F; So we force the DB into a mode where all future writes fail.
+      RecordBackgroundError(status);
+    &#125;
+  &#125;
+  if (write_batch &#x3D;&#x3D; tmp_batch_) tmp_batch_-&gt;Clear();
+
+  versions_-&gt;SetLastSequence(last_sequence);
+&#125;
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>上述处理的逻辑不难理解，主要分为以下几个步骤：</p>
+<ul>
+<li>基于当前已有的Write请求构建一个新的将被写入到memtable中的<code>WriteBatch</code>， 这个过程通过调用<code>BuildBatchGroup</code>来完成，同时该处理函数会设置<code>last_writer</code>也就是最后一个被添加到这个batch中的<code>Writer</code>。因为<code>BuildBatchGroup</code>并不会将所有queue中的batch都添加进来，所以这里的目的是为了后面唤醒其他线程时知道界限。</li>
+<li>然后<code>mutex_.Unlock</code>, 并且将该<code>write_batch</code>中的所有内容写入到<code>logfile_</code>中，即<code>WAL</code>。这里解答了我之前的一个疑问，就是<code>WriteOptions</code>中的<code>sync</code>为true的含义，并不是指对应的写入要完全bypass memtable落盘，而是指这里的WAL是否要立刻落盘。可以想象，如果sync为true，导致logfile落盘，那么在Repair或Open时系统也会找回crash时的数据。</li>
+<li>然后将这个batch内的所有记录都应用到memtable中：<code>status = WriteBatchInternal::InsertInto(write_batch, mem_);</code></li>
+</ul>
+<p><code>tmp_batch</code>在<code>BuildBatchGroup</code>中被使用，是一个类成员变量。</p>
+<hr>
+<p><strong>第五阶段：唤醒所有等待Writer写入的线程</strong></p>
+<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">while (true) &#123;
+  Writer* ready &#x3D; writers_.front();
+  writers_.pop_front();
+  if (ready !&#x3D; &amp;w) &#123;	&#x2F;&#x2F; 判断是不是leader，是的话就不能唤醒，否则导致死锁
+    ready-&gt;status &#x3D; status;	&#x2F;&#x2F; 设置apply记录时的状态给上层
+    ready-&gt;done &#x3D; true;	
+    ready-&gt;cv.Signal(); &#x2F;&#x2F; 设置done为true用于唤醒等待的线程
+  &#125;	
+  if (ready &#x3D;&#x3D; last_writer) break;	
+&#125;
+
+&#x2F;&#x2F; Notify new head of write queue
+if (!writers_.empty()) &#123;
+  writers_.front()-&gt;cv.Signal();	&#x2F;&#x2F; 找下一个leader
+&#125;
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>最后一步是唤醒所有等待的线程。</p>
+<p>这里会将每一个写入的<code>writer</code>的status设置为在执行：<code>WriteBatchInternal::InsertInto(write_batch, mem_)</code>的返回值，大部分情况下这个值都会是Ok，但是<code>InsertInto</code>本身执行如果在中间某个步骤出现了错误，会导致提前返回错误码，从而也会导致这里在执行错误之后的所有writer都获得错误的status。这从逻辑上是很好理解的，对于一个正常运行的系统：一旦一个写入错误，之后的写入都不应该继续进行，因此应该返回错误码。</p>
+<hr>
+<p>到此为止，我们几乎完全明白了leveldb的写入流程，除了几个调用的函数：<code>MakeRoomForWrite, BuildBatchGroup</code>以及与<code>Version</code>相关的几个操作。其中<code>MakeRoomForWrite</code>是一个非常核心的部分，我们会在后面重点关照它。</p>
+<p>到这里，我们终于可以给出一张用于说明LevelDB写入过程的图，其来源我已经记不清楚了，只记得当时是顺手保存的：</p>
+<p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-%E8%AF%BB%E5%86%99%E6%B5%81%E7%A8%8B/LevelDBWriteOverview.jpg" width="70%"></p>
+<hr>
+<h2 id="DBImpl读流程-Get"><a href="#DBImpl读流程-Get" class="headerlink" title="DBImpl读流程:Get"></a>DBImpl读流程:Get</h2><p>LevelDB的读操作流程相比之下比较简单，根据设计：LevelDB在读时会以<code>memetable-&gt; immutable memtable-&gt;files</code>的过程进行读取，直到其中某个步骤完成读取为止：</p>
+<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">&#123;
+  mutex_.Unlock();
+  &#x2F;&#x2F; First look in the memtable, then in the immutable memtable (if any).
+  LookupKey lkey(key, snapshot);
+  if (mem-&gt;Get(lkey, value, &amp;s)) &#123;
+    &#x2F;&#x2F; Done
+  &#125; else if (imm !&#x3D; nullptr &amp;&amp; imm-&gt;Get(lkey, value, &amp;s)) &#123;
+    &#x2F;&#x2F; Done
+  &#125; else &#123;
+    s &#x3D; current-&gt;Get(options, lkey, value, &amp;stats);
+    have_stat_update &#x3D; true;
+  &#125;
+  mutex_.Lock();
+&#125;
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>其中<code>current</code>是一个<code>Version</code>结构体，可以认为它类似于一个记录全局元数据的数据结构，因此同样也对多个SSTFile进行管理，因此可以通过它对所有SST文件进行搜索。</p>
+<p>除此之外，<code>Get</code>还有一些诸如对memtable和immtable进行引用和解引用的操作，这里不再说明，一方面是因为我们还不明确<code>Ref</code>的作用，另一方面它们对主要逻辑确实无足轻重。</p>
+<hr>
+<h2 id="其他相关函数"><a href="#其他相关函数" class="headerlink" title="其他相关函数"></a>其他相关函数</h2><h3 id="BuildBatchGroup"><a href="#BuildBatchGroup" class="headerlink" title="BuildBatchGroup"></a>BuildBatchGroup</h3><p>在<code>DBImpl::Write</code>中的一个步骤是创建一个用于写入的<code>WriteBatch</code>,按照逻辑，这个<code>Batch</code>不能太大，并且也不能包含<code>WriteOptions</code>完全不同的多个写入。这正是<code>BuildBatchGroup</code>的逻辑：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">WriteBatch<span class="token operator">*</span> <span class="token class-name">DBImpl</span><span class="token double-colon punctuation">::</span><span class="token function">BuildBatchGroup</span><span class="token punctuation">(</span>Writer<span class="token operator">*</span><span class="token operator">*</span> last_writer<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  mutex_<span class="token punctuation">.</span><span class="token function">AssertHeld</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">assert</span><span class="token punctuation">(</span><span class="token operator">!</span>writers_<span class="token punctuation">.</span><span class="token function">empty</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Writer<span class="token operator">*</span> first <span class="token operator">=</span> writers_<span class="token punctuation">.</span><span class="token function">front</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  WriteBatch<span class="token operator">*</span> result <span class="token operator">=</span> first<span class="token operator">-></span>batch<span class="token punctuation">;</span>
+  <span class="token function">assert</span><span class="token punctuation">(</span>result <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  size_t size <span class="token operator">=</span> <span class="token class-name">WriteBatchInternal</span><span class="token double-colon punctuation">::</span><span class="token function">ByteSize</span><span class="token punctuation">(</span>first<span class="token operator">-></span>batch<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// Allow the group to grow up to a maximum size, but if the</span>
+  <span class="token comment">// original write is small, limit the growth so we do not slow</span>
+  <span class="token comment">// down the small write too much.</span>
+  size_t max_size <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">&lt;&lt;</span> <span class="token number">20</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>size <span class="token operator">&lt;=</span> <span class="token punctuation">(</span><span class="token number">128</span> <span class="token operator">&lt;&lt;</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    max_size <span class="token operator">=</span> size <span class="token operator">+</span> <span class="token punctuation">(</span><span class="token number">128</span> <span class="token operator">&lt;&lt;</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>上述代码中，首先进行一系列的判断，然后将迭代所有<code>Writer Queue</code>中的Writer来创建写入batch，在这之前，先设置遍历的起始位置：<code>Writer* first = writers_.front();</code>，然后是设定这个batch能容纳的数据大小：<code>max_size</code>。这里的判断逻辑首先设定起始大小为1MB(<code>1 &lt;&lt; 20</code>), 然后通过判断第一个batch的大小是否小于<code>128K</code>来决定是否扩容这个<code>max_size</code>。这里的逻辑让我有点疑惑，注释说这样是为了让小的写入不被拖慢。</p>
+<p><code>size</code>记录了该batch当前的大小，因为first的batch必须被添加到write_batch中，所以其被初始化为<code>first-&gt;batch</code>的size。</p>
+<p>接下来是遍历<code>WriterQueue</code>中的元素并添加到写入的batch中，直到size超出前面的限制为止。这里添加的粒度是一个Writer的Batch，而不是一条记录：</p>
+<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">*last_writer &#x3D; first;
+std::deque&lt;Writer*&gt;::iterator iter &#x3D; writers_.begin();
+++iter;  &#x2F;&#x2F; Advance past &quot;first&quot;
+for (; iter !&#x3D; writers_.end(); ++iter) &#123;
+  Writer* w &#x3D; *iter;
+  if (w-&gt;sync &amp;&amp; !first-&gt;sync) &#123;
+    &#x2F;&#x2F; Do not include a sync write into a batch handled by a non-sync write.
+    break;
+  &#125;	
+
+  if (w-&gt;batch !&#x3D; nullptr) &#123;
+    size +&#x3D; WriteBatchInternal::ByteSize(w-&gt;batch);
+    if (size &gt; max_size) &#123;
+      &#x2F;&#x2F; Do not make batch too big
+      break;
+    &#125;
+
+    &#x2F;&#x2F; Append to *result
+    if (result &#x3D;&#x3D; first-&gt;batch) &#123;
+      &#x2F;&#x2F; Switch to temporary batch instead of disturbing caller&#39;s batch
+      result &#x3D; tmp_batch_;
+      assert(WriteBatchInternal::Count(result) &#x3D;&#x3D; 0);
+      WriteBatchInternal::Append(result, first-&gt;batch);
+    &#125;
+    WriteBatchInternal::Append(result, w-&gt;batch);
+  &#125;
+  *last_writer &#x3D; w;
+&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<ul>
+<li><p>第一个值得注意的地方在第六行的判断：不同WriteOptions的写入绝不能放在一个Batch中。但问题是，为什么不写成：</p>
+<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">if (w-&gt;sync !&#x3D; first-&gt;sync)<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>也就是说，如果<code>first-&gt;sync</code>是true，而<code>w-&gt;sync</code>是false的话，也能加入到这个batch中。这是因为仔细阅读<code>DBImpl::Write</code>的逻辑会发现，在batch写入WAL之后，判断是否要sync的依据是<code>options.sync</code>,实际上也就是此处的<code>first-&gt;sync</code>。因此，如果<code>w-&gt;sync==false &amp;&amp; first-&gt;sync==true</code>实际上是在说我们对后面的写入进行了一次不必要的persist，但正确性上没有问题。</p>
+</li>
+<li><p>该循环会在<code>size &gt; max_size</code>时退出，说明write_batch的大小已经超过了限制。</p>
+</li>
+<li>第二个要注意的地方是19行开始的判断，这个判断第一次执行一定为true，因为<code>result</code>在初始化时就被设置为了<code>first-&gt;batch</code>,除非在执行这里的判断之前就break出了循环。这里执行的是将result切换到tmp_batch_，并且将<code>first-&gt;batch</code>的数据写到其中。也就是说，如果最后生成的result中只有<code>first-&gt;batch</code>（提前break了）,那么result就是<code>first-&gt;batch</code>；否则就用类自带的<code>tmp_batch</code>。<ul>
+<li>根据注释，<code>first-&gt;batch</code>不能被破坏（因为其本质上是用户传进来的参数），所以也就不能在append的情况下用<code>first-&gt;batch</code>作为返回值，因此需要切换到<code>tmp_batch</code>来存储。</li>
+<li>如果是我，我会固定用<code>tmp_batch</code>做返回值，而不是做这么复杂的判断。作者是想省略一次拷贝<code>first-&gt;batch</code>的开销吗？</li>
+</ul>
+</li>
+<li>最后一定一定要更新<code>last_writer</code></li>
+</ul>
+<hr>
+
+                
+            </div>
+            <hr/>
+
+            
+
+    <div class="reprint" id="reprint-statement">
+        
+            <div class="reprint__author">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-user">
+                        文章作者:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="/about" rel="external nofollow noreferrer"></a>
+                </span>
+            </div>
+            <div class="reprint__type">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-link">
+                        文章链接:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="https://Holworth.github.io/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-%E8%AF%BB%E5%86%99%E6%B5%81%E7%A8%8B.html">https://Holworth.github.io/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-%E8%AF%BB%E5%86%99%E6%B5%81%E7%A8%8B.html</a>
+                </span>
+            </div>
+            <div class="reprint__notice">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-copyright">
+                        版权声明:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    本博客所有文章除特別声明外，均采用
+                    <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
+                    许可协议。转载请注明来源
+                    <a href="/about" target="_blank"></a>
+                    !
+                </span>
+            </div>
+        
+    </div>
+
+    <script async defer>
+      document.addEventListener("copy", function (e) {
+        let toastHTML = '<span>复制成功，请遵循本文的转载规则</span><button class="btn-flat toast-action" onclick="navToReprintStatement()" style="font-size: smaller">查看</a>';
+        M.toast({html: toastHTML})
+      });
+
+      function navToReprintStatement() {
+        $("html, body").animate({scrollTop: $("#reprint-statement").offset().top - 80}, 800);
+      }
+    </script>
+
+
+
+            <div class="tag_share" style="display: block;">
+                <div class="post-meta__tag-list" style="display: inline-block;">
+                    
+                        <div class="article-tag">
+                            
+                                <a href="/tags/LevelDB/">
+                                    <span class="chip bg-color">LevelDB</span>
+                                </a>
+                            
+                                <a href="/tags/C/">
+                                    <span class="chip bg-color">C++</span>
+                                </a>
+                            
+                                <a href="/tags/KV/">
+                                    <span class="chip bg-color">KV</span>
+                                </a>
+                            
+                        </div>
+                    
+                </div>
+                <div class="post_share" style="zoom: 80%; width: fit-content; display: inline-block; float: right; margin: -0.15rem 0;">
+                    <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+<div id="article-share">
+
+    
+    <div class="social-share" data-sites="twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin" data-wechat-qrcode-helper="<p>微信扫一扫即可分享！</p>"></div>
+    <script src="/libs/share/js/social-share.min.js"></script>
+    
+
+    
+
+</div>
+
+                </div>
+            </div>
+            
+                <style>
+    #reward {
+        margin: 40px 0;
+        text-align: center;
+    }
+
+    #reward .reward-link {
+        font-size: 1.4rem;
+        line-height: 38px;
+    }
+
+    #reward .btn-floating:hover {
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    #rewardModal {
+        width: 320px;
+        height: 350px;
+    }
+
+    #rewardModal .reward-title {
+        margin: 15px auto;
+        padding-bottom: 5px;
+    }
+
+    #rewardModal .modal-content {
+        padding: 10px;
+    }
+
+    #rewardModal .close {
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        color: rgba(0, 0, 0, 0.5);
+        font-size: 1.3rem;
+        line-height: 20px;
+        cursor: pointer;
+    }
+
+    #rewardModal .close:hover {
+        color: #ef5350;
+        transform: scale(1.3);
+        -moz-transform:scale(1.3);
+        -webkit-transform:scale(1.3);
+        -o-transform:scale(1.3);
+    }
+
+    #rewardModal .reward-tabs {
+        margin: 0 auto;
+        width: 210px;
+    }
+
+    .reward-tabs .tabs {
+        height: 38px;
+        margin: 10px auto;
+        padding-left: 0;
+    }
+
+    .reward-content ul {
+        padding-left: 0 !important;
+    }
+
+    .reward-tabs .tabs .tab {
+        height: 38px;
+        line-height: 38px;
+    }
+
+    .reward-tabs .tab a {
+        color: #fff;
+        background-color: #ccc;
+    }
+
+    .reward-tabs .tab a:hover {
+        background-color: #ccc;
+        color: #fff;
+    }
+
+    .reward-tabs .wechat-tab .active {
+        color: #fff !important;
+        background-color: #22AB38 !important;
+    }
+
+    .reward-tabs .alipay-tab .active {
+        color: #fff !important;
+        background-color: #019FE8 !important;
+    }
+
+    .reward-tabs .reward-img {
+        width: 210px;
+        height: 210px;
+    }
+</style>
+
+<div id="reward">
+    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close modal-close"><i class="fas fa-times"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs row">
+                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
+                    </ul>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('.tabs').tabs();
+    });
+</script>
+
+            
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">
+                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+            <div class="card">
+                <a href="/post/MICA-Reading-Notes.html">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/23.jpg" class="responsive-img" alt="MICA Reading Notes">
+                        
+                        <span class="card-title">MICA Reading Notes</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                        <span class="publish-date">
+                            <i class="far fa-clock fa-fw icon-date"></i>2022-02-22
+                        </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-user fa-fw"></i>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/key-value-store/">
+                        <span class="chip bg-color">key-value store</span>
+                    </a>
+                    
+                    <a href="/tags/database/">
+                        <span class="chip bg-color">database</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
+            <div class="card">
+                <a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-DB%E6%8E%A5%E5%8F%A3.html">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/14.jpg" class="responsive-img" alt="LevelDB阅读笔记:DB接口">
+                        
+                        <span class="card-title">LevelDB阅读笔记:DB接口</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-01-26
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/Coding/" class="post-category">
+                                    Coding
+                                </a>
+                            
+                            <a href="/categories/Coding/Database/" class="post-category">
+                                    Database
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/LevelDB/">
+                        <span class="chip bg-color">LevelDB</span>
+                    </a>
+                    
+                    <a href="/tags/C/">
+                        <span class="chip bg-color">C++</span>
+                    </a>
+                    
+                    <a href="/tags/KV/">
+                        <span class="chip bg-color">KV</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+
+</div>
+
+
+
+<!-- 代码块功能依赖 -->
+<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
+
+<!-- 代码语言 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
+
+
+<!-- 代码块复制 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
+
+
+<!-- 代码块收缩 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
+
+
+    </div>
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
+        <div class="toc-widget card" style="background-color: white;">
+            <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
+            <div id="toc-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOC 悬浮按钮. -->
+
+<div id="floating-toc-btn" class="hide-on-med-and-down">
+    <a class="btn-floating btn-large bg-color">
+        <i class="fas fa-list-ul"></i>
+    </a>
+</div>
+
+
+<script src="/libs/tocbot/tocbot.min.js"></script>
+<script>
+    $(function () {
+        tocbot.init({
+            tocSelector: '#toc-content',
+            contentSelector: '#articleContent',
+            headingsOffset: -($(window).height() * 0.4 - 45),
+            collapseDepth: Number('0'),
+            headingSelector: 'h2, h3, h4'
+        });
+
+        // modify the toc link href to support Chinese.
+        let i = 0;
+        let tocHeading = 'toc-heading-';
+        $('#toc-content a').each(function () {
+            $(this).attr('href', '#' + tocHeading + (++i));
+        });
+
+        // modify the heading title id to support Chinese.
+        i = 0;
+        $('#articleContent').children('h2, h3, h4').each(function () {
+            $(this).attr('id', tocHeading + (++i));
+        });
+
+        // Set scroll toc fixed.
+        let tocHeight = parseInt($(window).height() * 0.4 - 64);
+        let $tocWidget = $('.toc-widget');
+        $(window).scroll(function () {
+            let scroll = $(window).scrollTop();
+            /* add post toc fixed. */
+            if (scroll > tocHeight) {
+                $tocWidget.addClass('toc-fixed');
+            } else {
+                $tocWidget.removeClass('toc-fixed');
+            }
+        });
+
+        
+        /* 修复文章卡片 div 的宽度. */
+        let fixPostCardWidth = function (srcId, targetId) {
+            let srcDiv = $('#' + srcId);
+            if (srcDiv.length === 0) {
+                return;
+            }
+
+            let w = srcDiv.width();
+            if (w >= 450) {
+                w = w + 21;
+            } else if (w >= 350 && w < 450) {
+                w = w + 18;
+            } else if (w >= 300 && w < 350) {
+                w = w + 16;
+            } else {
+                w = w + 14;
+            }
+            $('#' + targetId).width(w);
+        };
+
+        // 切换TOC目录展开收缩的相关操作.
+        const expandedClass = 'expanded';
+        let $tocAside = $('#toc-aside');
+        let $mainContent = $('#main-content');
+        $('#floating-toc-btn .btn-floating').click(function () {
+            if ($tocAside.hasClass(expandedClass)) {
+                $tocAside.removeClass(expandedClass).hide();
+                $mainContent.removeClass('l9');
+            } else {
+                $tocAside.addClass(expandedClass).show();
+                $mainContent.addClass('l9');
+            }
+            fixPostCardWidth('artDetail', 'prenext-posts');
+        });
+        
+    });
+</script>
+
+    
+
+</main>
+
+
+
+
+    <footer class="page-footer bg-color">
+    
+        <link rel="stylesheet" href="/libs/aplayer/APlayer.min.css">
+<style>
+    .aplayer .aplayer-lrc p {
+        
+        display: none;
+        
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 16px !important;
+    }
+
+    .aplayer .aplayer-lrc p.aplayer-lrc-current {
+        
+        display: none;
+        
+        font-size: 15px;
+        color: #42b983;
+    }
+
+    
+    .aplayer.aplayer-fixed.aplayer-narrow .aplayer-body {
+        left: -66px !important;
+    }
+
+    .aplayer.aplayer-fixed.aplayer-narrow .aplayer-body:hover {
+        left: 0px !important;
+    }
+
+    
+</style>
+<div class="">
+    
+    <div class="row">
+        <meting-js class="col l8 offset-l2 m10 offset-m1 s12"
+                   server="netease"
+                   type="playlist"
+                   id="503838841"
+                   fixed='true'
+                   autoplay='false'
+                   theme='#42b983'
+                   loop='all'
+                   order='random'
+                   preload='auto'
+                   volume='0.7'
+                   list-folded='true'
+        >
+        </meting-js>
+    </div>
+</div>
+
+<script src="/libs/aplayer/APlayer.min.js"></script>
+<script src="/libs/aplayer/Meting.min.js"></script>
+
+    
+
+    <div class="container row center-align"
+         style="margin-bottom: 0px !important;">
+        <div class="col s12 m8 l8 copy-right">
+            Copyright&nbsp;&copy;
+            
+                <span id="year">2019-2022</span>
+            
+            <a href="/about" target="_blank"></a>
+            |&nbsp;Powered by&nbsp;<a href="https://hexo.io/" target="_blank">Hexo</a>
+            |&nbsp;Theme&nbsp;<a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank">Matery</a>
+            <br>
+            
+            
+            
+                
+            
+            
+                <span id="busuanzi_container_site_pv">
+                &nbsp;|&nbsp;<i class="far fa-eye"></i>&nbsp;总访问量:&nbsp;
+                    <span id="busuanzi_value_site_pv" class="white-color"></span>
+            </span>
+            
+            
+                <span id="busuanzi_container_site_uv">
+                &nbsp;|&nbsp;<i class="fas fa-users"></i>&nbsp;总访问人数:&nbsp;
+                    <span id="busuanzi_value_site_uv" class="white-color"></span>
+            </span>
+            
+            <br>
+
+            <!-- 运行天数提醒. -->
+            
+            <br>
+            
+        </div>
+        <div class="col s12 m4 l4 social-link social-statis">
+    <a href="https://github.com/blinkfox" class="tooltipped" target="_blank" data-tooltip="访问我的GitHub" data-position="top" data-delay="50">
+        <i class="fab fa-github"></i>
+    </a>
+
+
+
+    <a href="mailto:1181062873@qq.com" class="tooltipped" target="_blank" data-tooltip="邮件联系我" data-position="top" data-delay="50">
+        <i class="fas fa-envelope-open"></i>
+    </a>
+
+
+
+
+
+
+
+    <a href="tencent://AddContact/?fromId=50&fromSubId=1&subcmd=all&uin=1181062873" class="tooltipped" target="_blank" data-tooltip="QQ联系我: 1181062873" data-position="top" data-delay="50">
+        <i class="fab fa-qq"></i>
+    </a>
+
+
+
+
+
+
+
+    <a href="/atom.xml" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50">
+        <i class="fas fa-rss"></i>
+    </a>
+
+</div>
+    </div>
+</footer>
+
+<div class="progress-bar"></div>
+
+
+    <!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    var searchFunc = function (path, search_id, content_id) {
+        'use strict';
+        $.ajax({
+            url: path,
+            dataType: "xml",
+            success: function (xmlResponse) {
+                // get the contents from search data
+                var datas = $("entry", xmlResponse).map(function () {
+                    return {
+                        title: $("title", this).text(),
+                        content: $("content", this).text(),
+                        url: $("url", this).text()
+                    };
+                }).get();
+                var $input = document.getElementById(search_id);
+                var $resultContent = document.getElementById(content_id);
+                $input.addEventListener('input', function () {
+                    var str = '<ul class=\"search-result-list\">';
+                    var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                    $resultContent.innerHTML = "";
+                    if (this.value.trim().length <= 0) {
+                        return;
+                    }
+                    // perform local searching
+                    datas.forEach(function (data) {
+                        var isMatch = true;
+                        var data_title = data.title.trim().toLowerCase();
+                        var data_content = data.content.trim().replace(/<[^>]+>/g, "").toLowerCase();
+                        var data_url = data.url;
+                        data_url = data_url.indexOf('/') === 0 ? data.url : '/' + data_url;
+                        var index_title = -1;
+                        var index_content = -1;
+                        var first_occur = -1;
+                        // only match artiles with not empty titles and contents
+                        if (data_title !== '' && data_content !== '') {
+                            keywords.forEach(function (keyword, i) {
+                                index_title = data_title.indexOf(keyword);
+                                index_content = data_content.indexOf(keyword);
+                                if (index_title < 0 && index_content < 0) {
+                                    isMatch = false;
+                                } else {
+                                    if (index_content < 0) {
+                                        index_content = 0;
+                                    }
+                                    if (i === 0) {
+                                        first_occur = index_content;
+                                    }
+                                }
+                            });
+                        }
+                        // show search results
+                        if (isMatch) {
+                            str += "<li><a href='" + data_url + "' class='search-result-title'>" + data_title + "</a>";
+                            var content = data.content.trim().replace(/<[^>]+>/g, "");
+                            if (first_occur >= 0) {
+                                // cut out 100 characters
+                                var start = first_occur - 20;
+                                var end = first_occur + 80;
+                                if (start < 0) {
+                                    start = 0;
+                                }
+                                if (start === 0) {
+                                    end = 100;
+                                }
+                                if (end > content.length) {
+                                    end = content.length;
+                                }
+                                var match_content = content.substr(start, end);
+                                // highlight all keywords
+                                keywords.forEach(function (keyword) {
+                                    var regS = new RegExp(keyword, "gi");
+                                    match_content = match_content.replace(regS, "<em class=\"search-keyword\">" + keyword + "</em>");
+                                });
+
+                                str += "<p class=\"search-result\">" + match_content + "...</p>"
+                            }
+                            str += "</li>";
+                        }
+                    });
+                    str += "</ul>";
+                    $resultContent.innerHTML = str;
+                });
+            }
+        });
+    };
+
+    searchFunc('/search.xml', 'searchInput', 'searchResult');
+});
+</script>
+
+    <!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+</div>
+
+
+    <script src="/libs/materialize/materialize.min.js"></script>
+    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
+    <script src="/libs/aos/aos.js"></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    <script src="/js/matery.js"></script>
+
+    
+
+    
+
+    <!-- 雪花特效 -->
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
+    <!-- Baidu Analytics -->
+
+    <!-- Baidu Push -->
+
+<script>
+    (function () {
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        } else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+
+    
+    <script src="/libs/others/clicklove.js" async="async"></script>
+    
+    
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+    
+
+    
+
+    
+
+    <!--腾讯兔小巢-->
+    
+    
+
+    
+
+    
+
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
+    
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<!--<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+</body>
+
+</html>

@@ -4,8 +4,8 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="keywords" content="Ring Category, Hexo">
-    <meta name="description" content="">
+    <meta name="keywords" content="MICA Reading Notes, Hexo">
+    <meta name="description" content="MICA: A Holistic Approach to Fast In-Memory Key-Value StorageOverviewMICA is an in-memory key-value store system that en">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="renderer" content="webkit|ie-stand|ie-comp">
@@ -13,13 +13,14 @@
     <meta name="format-detection" content="telephone=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
     <!-- Global site tag (gtag.js) - Google Analytics -->
 
 
-    <title>Ring Category | Hexo</title>
+    <title>MICA Reading Notes | Hexo</title>
     <link rel="icon" type="image/png" href="/favicon.png">
 
-    <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.css">
+    <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
     <link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
     <link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
     <link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
@@ -27,7 +28,7 @@
     <link rel="stylesheet" type="text/css" href="/css/matery.css">
     <link rel="stylesheet" type="text/css" href="/css/my.css">
 
-    <script src="/libs/jquery/jquery.min.js"></script>
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
 
 <meta name="generator" content="Hexo 6.0.0"></head>
 
@@ -149,8 +150,6 @@
             
         </div>
     </div>
-
-    
 
     <ul class="menu-list mobile-menu-list">
         
@@ -310,12 +309,12 @@
 
 
 
-<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/22.jpg')">
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/23.jpg')">
     <div class="container" style="right: 0px;left: 0px;">
         <div class="row">
             <div class="col s12 m12 l12">
                 <div class="brand">
-                    <h1 class="description center-align post-title">Ring Category</h1>
+                    <h1 class="description center-align post-title">MICA Reading Notes</h1>
                 </div>
             </div>
         </div>
@@ -431,27 +430,18 @@
                     
                     <div class="article-tag">
                         
-                            <a href="/tags/Ring-Theory/">
-                                <span class="chip bg-color">Ring Theory</span>
+                            <a href="/tags/key-value-store/">
+                                <span class="chip bg-color">key-value store</span>
                             </a>
                         
-                            <a href="/tags/AlgebraChapter0/">
-                                <span class="chip bg-color">AlgebraChapter0</span>
+                            <a href="/tags/database/">
+                                <span class="chip bg-color">database</span>
                             </a>
                         
                     </div>
                     
                 </div>
                 <div class="col s5 right-align">
-                    
-                    <div class="post-cate">
-                        <i class="fas fa-bookmark fa-fw icon-category"></i>
-                        
-                            <a href="/categories/Mathematics/" class="post-category">
-                                Mathematics
-                            </a>
-                        
-                    </div>
                     
                 </div>
             </div>
@@ -460,7 +450,7 @@
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
-                    2022-01-28
+                    2022-02-22
                 </div>
                 
 
@@ -484,78 +474,109 @@
 
         <div class="card-content article-card-content">
             <div id="articleContent">
-                <h2 id="Category-Ring"><a href="#Category-Ring" class="headerlink" title="Category Ring"></a>Category Ring</h2><h3 id="3-1-Ring-homomorphism"><a href="#3-1-Ring-homomorphism" class="headerlink" title="3.1 Ring homomorphism"></a>3.1 Ring homomorphism</h3><p>A ring homomorphism is a function between two rings that maintains two operations: $\cdot$ and $+$, that is:</p>
-<p><strong>Definition(Ring homomorphism):</strong> Let $R, S$ be rings, a function $f: R\rightarrow S$ is a ring homomorphism, if:</p>
+                <h1 id="MICA-A-Holistic-Approach-to-Fast-In-Memory-Key-Value-Storage"><a href="#MICA-A-Holistic-Approach-to-Fast-In-Memory-Key-Value-Storage" class="headerlink" title="MICA: A Holistic Approach to Fast In-Memory Key-Value Storage"></a>MICA: A Holistic Approach to Fast In-Memory Key-Value Storage</h1><h2 id="Overview"><a href="#Overview" class="headerlink" title="Overview"></a>Overview</h2><p>MICA is an in-memory key-value store system that enables fast Put and Get operation. In this paper, the author proposes three aspects of designing an in-memory key-value store, as follows:</p>
+<p><img src="/post/MICA-Reading-Notes/xmind.png" width="90%"></p>
+<p>The three aspects includes: </p>
 <ul>
-<li>$(\forall a, b\in R):\quad f(a+b) = f(a) + f(b)$</li>
-<li>$(\forall a,b\in R): \quad f(ab) = f(a)f(b)$</li>
-<li>$f(1_{R}) = 1_{S}$</li>
+<li>Use data partition or shared data replacement strategy?</li>
+<li>How to effectively process network request packets?</li>
+<li>Design data structures for fast processing requests</li>
 </ul>
-<p>Since $f$ is a function maintains $+$, it is basically a group homomorphism of the underlying abelian group. Thus, it naturally has: $f(0_{R})=0_{S}$. However, the second axiom does not induce the third one. That is: a function maintains both $\cdot$ and $+$ might be send identity to identity. For example:</p>
-<script type="math/tex; mode=display">
-f: \mathbb{Z}\rightarrow \mathbb{Z}, a\mapsto 0</script><p>is a function maintaining both addition and multiplication. But it is not a ring homomorphism.</p>
-<p><strong>Property of homomorphism:</strong><br>Let $R, S$ be non-zero rings, $f:R\rightarrow S$ is a ring homomorphim, the following statement is true:</p>
+<p>Based on above design aspects, the author designs and implements <strong>MICA</strong> by taking reasonable choices in these three aspects:</p>
 <ul>
-<li>If $r\in R$ is an unit, then $f(r)$ is an unit in $S$, the inverse is $f(r^{-1})$</li>
-<li>If $r\in R$ is a zero-divisor, then $f(r)$ might not be a zero-divisor as $f(r)$ might be zero. </li>
-<li>The composition of ring homomorphism is still a ring homorphism.</li>
+<li>MICA uses data partition to avoid access contention in shared data case.</li>
+<li>MICA bypass operating system kernel by directly reading from NIC.</li>
+<li>MICA designs circular log, lossy hash indexes for fast put and get operation.</li>
+</ul>
+<p>In conclusion, this paper, as stated in the title, shows a “holistic” view of designing an in-memory key-value store, which covers data replacement, data structure and request processing.</p>
+<hr>
+<h2 id="Key-Value-store-design-choices"><a href="#Key-Value-store-design-choices" class="headerlink" title="Key-Value store design choices"></a>Key-Value store design choices</h2><h3 id="Data-partition-or-Not"><a href="#Data-partition-or-Not" class="headerlink" title="Data partition or Not"></a>Data partition or Not</h3><p><img src="/post/MICA-Reading-Notes/fig2.png" width="40%"></p>
+<p>The author claims there are two modes for data placement(or access scheme, but placement often determines access mode), namely concurrent access and exclusive access. </p>
+<ul>
+<li><strong>Concurrent access</strong>: Multiple threads access shared memory data via synchronization (mutex etc.).</li>
+<li><strong>Exclusive access</strong>: Each core only accesses its local data partition.</li>
+</ul>
+<p>Obviously, exclusive access avoids heavy contention of shared data, and the paper states: </p>
+<blockquote>
+<p>Prior work observed that partitioning can have the best throughput and scalability.</p>
+</blockquote>
+<p>However, partition strategy may face performance degrade due to <strong>imbalance workload</strong>. For example, one parition are heavily accessed while the others are not. The core binds to the frequently-accessed parition becomes the bottleneck in the whole system. In contrast, in a shared-data system, this may not become an issue since multiple cores can concurrently execute requests.</p>
+<p>The key issue is to <strong>eliminating penalty caused by skewness</strong> by reasonably paritioning the whole data set.</p>
+<hr>
+<h3 id="Avoid-network-stack-overhead"><a href="#Avoid-network-stack-overhead" class="headerlink" title="Avoid network stack overhead"></a>Avoid network stack overhead</h3><p>Conventional KV store uses socket IO for transferring data, this may cause huge network stack overhead. One way to solve this is to directly read data from NIC. However, user-level can not decide which core processes the packet. There are two levels of packet directing:</p>
+<ul>
+<li>flow-level directing: NIC hashes the header of a package and sends it to a core based on the hash value with a user-specified mapping table.</li>
+<li>Object-level directing: The software uses core-communication to handle a packet to another. </li>
 </ul>
 <hr>
-<h3 id="3-2-Category-textbf-Ring"><a href="#3-2-Category-textbf-Ring" class="headerlink" title="3.2 Category $\textbf{Ring}$"></a>3.2 Category $\textbf{Ring}$</h3><p>The category “Ring” consists all rings, and the morphism set between two objects is the ring homomorphisms. </p>
-<p>There are some interesting results in $\textbf{Ring}$: </p>
+<h3 id="Data-structures"><a href="#Data-structures" class="headerlink" title="Data structures"></a>Data structures</h3><p>There are two key components for an in-memory key-value store: </p>
 <ul>
-<li>$\{0\}$ is a final object in $\textbf{Ring}$ but not a initial object. The reason is that the identity in $\{0\}$ is exactly its zero, which means $\{0\}$ only has a ring homomorphism to itself.</li>
-<li>$(\mathbb{Z}, \cdot, +)$ is an initial object in $\textbf{Ring}$, the any homomorphism $f: \mathbb{Z} \rightarrow R$ is uniquely determined by $f(1)$.</li>
+<li><strong>Memory allocator</strong> for storing key-value pairs.</li>
+<li><strong>Indexes</strong> for fast searching specific items.</li>
 </ul>
-<p>The following proposition describes the universal property of polynomial ring on $\mathbb{Z}$: </p>
-<p><strong>Theorem(Universal property of polynomial ring):</strong> Let $A$ be a finite set: $A=\{a_1, a_2,\ldots, a_{k}\}$. Consider a new category $\mathscr{R}_{A}$: The object of $\mathscr{R}_{A}$ is $(j, R)$, where $R$ is a ring, and:</p>
-<script type="math/tex; mode=display">
-j:A\rightarrow R</script><p>is a set-function. The morphism from object $(j_{1}, R_{1})$ to $(j_{2}, R_{2})$ is the following diagram:</p>
-<center>
-<img src="https://i.upmath.me/svg/%0A%5Cbegin%7Btikzcd%7D%0AR_%7B1%7D%20%5Carrow%5Brr%2C%20%22%5Cvarphi%22%5D%20%26%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%26%20R_%7B2%7D%20%5C%5C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%26%20A%20%5Carrow%5Blu%2C%20%22j_%7B1%7D%22%5D%20%5Carrow%5Bru%2C%20%22j_%7B2%7D%22'%5D%20%26%20%20%20%20%20%20%0A%5Cend%7Btikzcd%7D%0A" alt="
-">
-</center>
-
-<p>Then $(\mathbb{Z}[x_1,x_2,\ldots,x_{k}], \iota)$ is an initial object in $\mathscr{R}_{A}$, where $\iota(a_{i}) = x_{i}, i=1,2,\ldots, k$.</p>
-<p>The proof this this theorem is pretty straight forward. We need to show for each $(j, R)$ in $\mathscr{R}_{A}$, the following diagram is true:</p>
-<center>
-<img src="https://i.upmath.me/svg/%0A%25%20https%3A%2F%2Ftikzcd.yichuanshen.de%2F%23N4Igdg9gJgpgziAXAbVABwnAlgFyxMJZABgBoBGAXVJADcBDAGwFcYkQBBEAX1PU1z5CKMsWp0mrdgB1pAW3o4AFgCMVwAFrdkADwD65UvoBMpWYygQccI3uABrbpR58QGbHgJFTYmgxZsiCAASjziMFAA5vBEoABmAE4QckhkIDgQSKYSAewAViA0jPQqMIwACgKewiAJWJFKOC7xSSmIhumZiNn%2BUkGyMDpYcNYABACEsgwJaEpYzSCJyak0GUgdvYEgsvg49GHcQA%0A%5Cbegin%7Btikzcd%7D%0A%7B%5Cmathbb%7BZ%7D%5Bx_1%2Cx_2%2C%5Cldots%2Cx_%7Bk%7D%5D%7D%20%5Carrow%5Brr%2C%20%22%5Cexists%20!%5Cvarphi%22%5D%20%26%20%20%26%20R%20%5C%5C%0AA%20%5Carrow%5Brru%2C%20%22j%22'%5D%20%5Carrow%5Bu%2C%20%22%5Ciota%22%5D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%26%20%20%26%20%20%0A%5Cend%7Btikzcd%7D%0A" alt="
-">
-</center>
-
-<p>To prove this, one ituitive way is to map each polynomial to its coresponding “value”: $x_{i}$ is replaced as $j(a_{i})$, and the whole polynomial forms a linear summation of multiplication consists of $j(a_{i})$. The uniqueness is determined by the property of homomorphism.</p>
+<p>As for memory allocator, there are two kinds of designs:</p>
+<p><img src="/post/MICA-Reading-Notes/allocator.png" width="50%"></p>
+<ul>
+<li>Log-based allocator: Append key-value items to the end of the log. The garbage collection is done by moving all alive objects to a new log pool.</li>
+<li>Dynamic Obj allocator: This is similar to our <code>malloc</code> function that dynamically allocates memory for objects of different size. The allocator has to track allocated memory and merge unused memory region when necessary.</li>
+</ul>
+<p>Indexes are responsible for retriving a key-value pair in memory pool. So it must be both read and write fast. Hash table is a good choice for this case.</p>
 <hr>
-<h3 id="3-3-Monomorphism-and-Epimorphism"><a href="#3-3-Monomorphism-and-Epimorphism" class="headerlink" title="3.3 Monomorphism and Epimorphism"></a>3.3 Monomorphism and Epimorphism</h3><p><strong>Definition(Kernel of ring homomorphism)</strong> Let $R, S$ be rings and $f$ a ring homomorphism from $R$ to $S$, define kernel of this homomorphism as:</p>
-<script type="math/tex; mode=display">
-\ker f=\{r\in R\mid f(r) = 0_{S}\}</script><p><strong>Theorem(Property of monomorphism)</strong> Let $f$ be a ring homomorphism from $R$ to $S$, the following statements are equavalent: </p>
+<h2 id="MICA-designs"><a href="#MICA-designs" class="headerlink" title="MICA designs"></a>MICA designs</h2><p>MICA designes includes the tradeoffs for the three aspects mentioned above. The overview of MICA is as follows:</p>
+<p><img src="/post/MICA-Reading-Notes/mica.png" width="80%"></p>
+<h3 id="Data-parition"><a href="#Data-parition" class="headerlink" title="Data parition"></a>Data parition</h3><p>MICA takes data parition method to achive parallel data access. The partition uses <strong>Keyhash-based partition</strong> scheme. That is: keys are divided into separate paritions based on their hash value. (Each parition occupies an equal range of hash value).</p>
+<p>The advantage is:</p>
 <ul>
-<li>$f$ is monomorphism </li>
-<li>$\ker f=\{0_{R}\}$</li>
-<li>$f$ is injective as set-function</li>
+<li><p>Eliminate skewness since keys are distributed uniformly after a uniform hash function. The paper says:</p>
+<blockquote>
+<p>after partitioning keys into 16 partitions, however, the most popular partition is only 53% more frequently requested than the average</p>
+</blockquote>
+</li>
 </ul>
-<p><strong>Definition(Epimorphism)</strong> A ring homomorphism $f:R\rightarrow S$ is a ring homomorphism, if and only if for any ring $T$ and ring homomorphism $S\rightarrow T, \varphi_1, \varphi_2$:</p>
-<script type="math/tex; mode=display">
-f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script><p>That is, if the following diagram commute: </p>
-<center>
-<img src="https://i.upmath.me/svg/%0A%25%20https%3A%2F%2Ftikzcd.yichuanshen.de%2F%23N4Igdg9gJgpgziAXAbVABwnAlgFyxMJZABgBpiBdUkANwEMAbAVxiRACUQBfU9TXfIRQBGclVqMWbAMrdeIDNjwEiAJjHV6zVohAAVbuJhQA5vCKgAZgCcIAWyRkQOCElETtbS3Ku2HidxckdRA4AAssSxw3agY6ACMYBgAFfmUhEGssEzDozUkdEAAdIvprNAiAfWBVLh8QG3sY51dEEPDI6MQAWnctKV0SsoqsauE6rgouIA%0A%5Cbegin%7Btikzcd%7D%0AR%20%5Carrow%5Br%2C%20%22f%22%5D%20%26%20S%20%5Carrow%5Br%2C%20%22%5Cvarphi_%7B2%7D%22'%2C%20shift%20right%5D%20%5Carrow%5Br%2C%20%22%5Cvarphi_%7B1%7D%22%2C%20shift%20left%5D%20%26%20T%0A%5Cend%7Btikzcd%7D%0A" alt="
-">
-</center>
-
-<p>Then we must have $\varphi_1=\varphi_2$. </p>
-<p>In category $\textbf{Grp}$, we know that a group homomorphism is epimorphism iff it is surjective. However, in $\textbf{Ring}$ it is not necessarily the same. Here is an example: </p>
-<p>Consider $\mathbb{Z}$ and $\mathbb{Q}$ and the natural injection $\mathbb{Z}\rightarrow \mathbb{Q}$. This is a ring homomorphism but not surjective. However, it is an epimorphism:<br>If the following diagram commutes:</p>
-<center>
-<img src="https://i.upmath.me/svg/%0A%25%20https%3A%2F%2Ftikzcd.yichuanshen.de%2F%23N4Igdg9gJgpgziAXAbVABwnAlgFyxMJZABgBpiBdUkANwEMAbAVxiRAB12BbOnACwBGA4AC0AviDGl0mXPkIoAjOSq1GLNpx78hwAIoSpM7HgJEATCur1mrRCABKk1TCgBzeEVAAzAE4QuJGUQHAgkSxA4PixvHCDqBjoBGAYABVlTBRBfLDc%2BOOt1Ow52el80aIB9YHNDaRA-APiQsMQIqJi4xABaYJsNe04yiqxqxTqff0DEMhbmnDosBjY%2BCAgAa2cxIA%0A%5Cbegin%7Btikzcd%7D%0A%5Cmathbb%7BZ%7D%20%5Carrow%5Br%2C%20hook%5D%20%26%20%5Cmathbb%7BQ%7D%20%5Carrow%5Br%2C%20%22%5Cvarphi_%7B2%7D%22'%2C%20shift%20right%5D%20%5Carrow%5Br%2C%20%22%5Cvarphi_%7B1%7D%22%2C%20shift%20left%5D%20%26%20R%0A%5Cend%7Btikzcd%7D%0A" alt="
-">
-</center>
-
-<p>Then we have $\varphi_1\mid_{\mathbb{Z}}=\varphi_2\mid_{\mathbb{Z}}=\varphi$. Thus we have $\varphi_{1}(\frac{q_{1}}{q_{2}})=\varphi_{1}(q_{1})\varphi_{1}(q_{2}^{-1})=\varphi_{1}(q_1)\varphi_1({q_{2}})^{-1}=\varphi(q_1)\varphi(q_2)^{-1}=\varphi_{2}(\frac{q_1}{q_2})$. Thus we have $\varphi_1=\varphi_2$. </p>
-<p><strong>NOTE</strong>: This counterexample reminds us do not treat surjective homomorphism as equavilant with epimorphism. Another question is if the following proposition is true?</p>
-<p><strong>(Proposition)</strong> $f$ is a ring homomorphism, if $f$ is surjective, then $f$ is an epimorphism. </p>
-<p>The answer is Yes. For any element of $s\in S$, we have</p>
-<script type="math/tex; mode=display">
-\varphi_1(s) = \varphi_1(f(r))=(\varphi_1\circ f)(r) = (\varphi_2\circ f)(r)=\varphi_2(f(r))=\varphi_2(s)</script><p>In conclusion, we have: $surjective \Rightarrow Epimophism$ but the inverse is false. </p>
-
+<p>The author defines two access modes under data partition strategy, namely <strong>EREW, CREW</strong>:</p>
+<ul>
+<li>EREW: <em>Exclusive Read Exclusive Write</em>, each core can only access its own parition, thus requires no extra synchronization.</li>
+<li>CREW: <em>Concurrent Read Exclusive Write</em>. Multiple core can read one parition but each core can only write its own partition. This enables concurrent access to avoid skewness overhead but incurs extra sychronization overhead.</li>
+</ul>
+<hr>
+<h3 id="Network-stack-overhead"><a href="#Network-stack-overhead" class="headerlink" title="Network stack overhead"></a>Network stack overhead</h3><p>MICA avoids network stack overhead by directly transferring packages from NIC. </p>
+<p><strong>Package direction:</strong></p>
+<ul>
+<li>Each request packages should be handled to the partition containing the key the packages carries.</li>
+<li>NIC director does not understand package key and thus failed to handle the package to appropriate core</li>
+<li>MICA client calculates the hash value of the key and encodes it in the header of UDP package, assiting hardware to direct the right core.</li>
+</ul>
+<hr>
+<h3 id="Data-structure"><a href="#Data-structure" class="headerlink" title="Data structure"></a>Data structure</h3><p>MICA can be used as a cache or key-value store. In cache mode, a inserted key-value pairs might be evicted and can not be accessed for the next Get. </p>
+<h4 id="Cache-Mode"><a href="#Cache-Mode" class="headerlink" title="Cache Mode"></a>Cache Mode</h4><p>MICA uses circular log and lossy hash index for cache mode. </p>
+<p><strong>Circurlar log</strong> is basically a queue in which each element is a key-value items. </p>
+<p><img src="/post/MICA-Reading-Notes/circularlog.png" width="40%"></p>
+<ul>
+<li>Insertion: Append key-value items to the tail of this log. </li>
+<li>Updating: Find the offset of specific key, if the size is big enough to accommodate new key-value pair, then overwritten old contents, otherwise do insertion.</li>
+</ul>
+<p>Insertion operation may overwritten items at head end, but this is allowed in cache semantics. </p>
+<p><strong>Lossy Hash index</strong> is a hash index that enables <strong>CPU cache-like</strong> evicted strategy:</p>
+<p><img src="/post/MICA-Reading-Notes/hash.png" width="40%"></p>
+<ul>
+<li>Hash index consists of multiple buckets. Each bucket contains a fixed number of index entries. </li>
+<li>Each index entry contains a <strong>tag</strong> (a portion of key hash value) and <strong>offset</strong> (where key value items are stored)</li>
+<li>Insertion: find the target bucket and evict one item from this bucket if the bucket is full, otherwise write tag + offset at an empty slot.</li>
+<li>Get: Find the target bucket, compare key tag and stored tag to find match item.</li>
+</ul>
+<p><strong>Concurrent Lossy Hash Index</strong>: In CREW mode, one core might write the index while the other cores are reading it. The hash index uses optimistic locking scheme by adding a version number field to each bucket. Each operation first checks if version is even, which indicates a write is in progress, before actually modifying bucket data.</p>
+<p><strong>How Circular log and Lossy Hash index works together in partition?</strong></p>
+<ul>
+<li><p>When inserting a key-value pair into a data partition, circuclar log first makes space containg this item, then inserts coresponds item offset and tag to hash index. When inserting into hash index, one item might be evicted from the same bucket but it’s ok because of cache semantics. In addition, there is no need to reclaim related log space as incomming insertion will overwrite it and it will not be accessed since hash index has removed this item. </p>
+<p>However, append entries to circular log may overwrite an existed item and corresponds index entry is supposed to be deleted in case dangling pointer issue. MICA solves this problem by using bigger pointer.</p>
+</li>
+<li><p>When deleting a key-value pair in a data partition, directly remove item in hash index.</p>
+</li>
+<li><p>When searching for a key-value pair, it directly searches the hash index.</p>
+</li>
+</ul>
+<hr>
+<h4 id="Store-Mode"><a href="#Store-Mode" class="headerlink" title="Store Mode"></a>Store Mode</h4><h2 id="Expression"><a href="#Expression" class="headerlink" title="Expression"></a>Expression</h2>
                 
             </div>
             <hr/>
@@ -571,7 +592,7 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="/about" rel="external nofollow noreferrer">Holworth</a>
+                    <a href="/about" rel="external nofollow noreferrer"></a>
                 </span>
             </div>
             <div class="reprint__type">
@@ -581,7 +602,7 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="https://Holworth.github.io/post/Ring-Category.html">https://Holworth.github.io/post/Ring-Category.html</a>
+                    <a href="https://Holworth.github.io/post/MICA-Reading-Notes.html">https://Holworth.github.io/post/MICA-Reading-Notes.html</a>
                 </span>
             </div>
             <div class="reprint__notice">
@@ -594,7 +615,7 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
                     本博客所有文章除特別声明外，均采用
                     <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
                     许可协议。转载请注明来源
-                    <a href="/about" target="_blank">Holworth</a>
+                    <a href="/about" target="_blank"></a>
                     !
                 </span>
             </div>
@@ -619,12 +640,12 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
                     
                         <div class="article-tag">
                             
-                                <a href="/tags/Ring-Theory/">
-                                    <span class="chip bg-color">Ring Theory</span>
+                                <a href="/tags/key-value-store/">
+                                    <span class="chip bg-color">key-value store</span>
                                 </a>
                             
-                                <a href="/tags/AlgebraChapter0/">
-                                    <span class="chip bg-color">AlgebraChapter0</span>
+                                <a href="/tags/database/">
+                                    <span class="chip bg-color">database</span>
                                 </a>
                             
                         </div>
@@ -791,6 +812,10 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
 
     
 
+    
+
+    
+
 <article id="prenext-posts" class="prev-next articles">
     <div class="row article-row">
         
@@ -799,13 +824,13 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
                 <i class="far fa-dot-circle"></i>&nbsp;本篇
             </div>
             <div class="card">
-                <a href="/post/Ring-Category.html">
+                <a href="/post/MICA-Reading-Notes.html">
                     <div class="card-image">
                         
                         
-                        <img src="/medias/featureimages/22.jpg" class="responsive-img" alt="Ring Category">
+                        <img src="/medias/featureimages/23.jpg" class="responsive-img" alt="MICA Reading Notes">
                         
-                        <span class="card-title">Ring Category</span>
+                        <span class="card-title">MICA Reading Notes</span>
                     </div>
                 </a>
                 <div class="card-content article-content">
@@ -816,15 +841,11 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
                     </div>
                     <div class="publish-info">
                             <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2022-01-28
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-02-22
                             </span>
                         <span class="publish-author">
                             
-                            <i class="fas fa-bookmark fa-fw icon-category"></i>
-                            
-                            <a href="/categories/Mathematics/" class="post-category">
-                                    Mathematics
-                                </a>
+                            <i class="fas fa-user fa-fw"></i>
                             
                             
                         </span>
@@ -834,12 +855,12 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
                 
                 <div class="card-action article-tags">
                     
-                    <a href="/tags/Ring-Theory/">
-                        <span class="chip bg-color">Ring Theory</span>
+                    <a href="/tags/key-value-store/">
+                        <span class="chip bg-color">key-value store</span>
                     </a>
                     
-                    <a href="/tags/AlgebraChapter0/">
-                        <span class="chip bg-color">AlgebraChapter0</span>
+                    <a href="/tags/database/">
+                        <span class="chip bg-color">database</span>
                     </a>
                     
                 </div>
@@ -853,13 +874,13 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
                 下一篇&nbsp;<i class="fas fa-chevron-right"></i>
             </div>
             <div class="card">
-                <a href="/post/Definition-of-Ring.html">
+                <a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-%E8%AF%BB%E5%86%99%E6%B5%81%E7%A8%8B.html">
                     <div class="card-image">
                         
                         
-                        <img src="/medias/featureimages/20.jpg" class="responsive-img" alt="Definition of Ring">
+                        <img src="/medias/featureimages/10.jpg" class="responsive-img" alt="LevelDB阅读笔记:读写流程">
                         
-                        <span class="card-title">Definition of Ring</span>
+                        <span class="card-title">LevelDB阅读笔记:读写流程</span>
                     </div>
                 </a>
                 <div class="card-content article-content">
@@ -870,14 +891,18 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
                     </div>
                     <div class="publish-info">
                             <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2022-01-27
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-02-16
                             </span>
                         <span class="publish-author">
                             
                             <i class="fas fa-bookmark fa-fw icon-category"></i>
                             
-                            <a href="/categories/Mathematics/" class="post-category">
-                                    Mathematics
+                            <a href="/categories/Coding/" class="post-category">
+                                    Coding
+                                </a>
+                            
+                            <a href="/categories/Coding/Database/" class="post-category">
+                                    Database
                                 </a>
                             
                             
@@ -887,12 +912,16 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
                 
                 <div class="card-action article-tags">
                     
-                    <a href="/tags/Ring-Theory/">
-                        <span class="chip bg-color">Ring Theory</span>
+                    <a href="/tags/LevelDB/">
+                        <span class="chip bg-color">LevelDB</span>
                     </a>
                     
-                    <a href="/tags/AlgebraChapter0/">
-                        <span class="chip bg-color">AlgebraChapter0</span>
+                    <a href="/tags/C/">
+                        <span class="chip bg-color">C++</span>
+                    </a>
+                    
+                    <a href="/tags/KV/">
+                        <span class="chip bg-color">KV</span>
                     </a>
                     
                 </div>
@@ -1024,13 +1053,6 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
 </main>
 
 
-<script src="https://cdn.bootcss.com/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-<script>
-    MathJax.Hub.Config({
-        tex2jax: {inlineMath: [['$', '$'], ['\(', '\)']]}
-    });
-</script>
-
 
 
     <footer class="page-footer bg-color">
@@ -1086,16 +1108,17 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
 </div>
 
 <script src="/libs/aplayer/APlayer.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/meting@2/dist/Meting.min.js"></script>
+<script src="/libs/aplayer/Meting.min.js"></script>
 
     
-    <div class="container row center-align" style="margin-bottom: 0px !important;">
+
+    <div class="container row center-align"
+         style="margin-bottom: 0px !important;">
         <div class="col s12 m8 l8 copy-right">
             Copyright&nbsp;&copy;
             
                 <span id="year">2019-2022</span>
             
-            <span id="year">2019</span>
             <a href="/about" target="_blank"></a>
             |&nbsp;Powered by&nbsp;<a href="https://hexo.io/" target="_blank">Hexo</a>
             |&nbsp;Theme&nbsp;<a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank">Matery</a>
@@ -1103,21 +1126,23 @@ f\circ \varphi_1 = f\circ \varphi_2\Longrightarrow \varphi_1 = \varphi_2</script
             
             
             
+                
             
             
-            
-            <span id="busuanzi_container_site_pv">
-                |&nbsp;<i class="far fa-eye"></i>&nbsp;总访问量:&nbsp;<span id="busuanzi_value_site_pv"
-                    class="white-color"></span>&nbsp;次
+                <span id="busuanzi_container_site_pv">
+                &nbsp;|&nbsp;<i class="far fa-eye"></i>&nbsp;总访问量:&nbsp;
+                    <span id="busuanzi_value_site_pv" class="white-color"></span>
             </span>
             
             
-            <span id="busuanzi_container_site_uv">
-                |&nbsp;<i class="fas fa-users"></i>&nbsp;总访问人数:&nbsp;<span id="busuanzi_value_site_uv"
-                    class="white-color"></span>&nbsp;人
+                <span id="busuanzi_container_site_uv">
+                &nbsp;|&nbsp;<i class="fas fa-users"></i>&nbsp;总访问人数:&nbsp;
+                    <span id="busuanzi_value_site_uv" class="white-color"></span>
             </span>
             
             <br>
+
+            <!-- 运行天数提醒. -->
             
             <br>
             
@@ -1279,6 +1304,22 @@ $(function () {
     <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
     <script src="/js/matery.js"></script>
 
+    
+
+    
+
+    <!-- 雪花特效 -->
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
     <!-- Baidu Analytics -->
 
     <!-- Baidu Push -->
@@ -1308,7 +1349,8 @@ $(function () {
 
     
 
-	
+    <!--腾讯兔小巢-->
+    
     
 
     
