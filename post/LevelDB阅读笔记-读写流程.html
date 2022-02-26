@@ -520,31 +520,31 @@ class DBImpl : public DB &amp;#123;
 <span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <hr>
 <h2 id="DBImpl写流程：Put与Delete"><a href="#DBImpl写流程：Put与Delete" class="headerlink" title="DBImpl写流程：Put与Delete"></a>DBImpl写流程：Put与Delete</h2><p><code>DBImpl</code>的<code>Put</code>和<code>Delete</code>操作实际上经过了如下调用链：</p>
-<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">&#x2F;&#x2F; db_impl.cc
-&#x2F;&#x2F; Convenience methods
-Status DBImpl::Put(const WriteOptions&amp; o, const Slice&amp; key, const Slice&amp; val) &#123;
-  return DB::Put(o, key, val);
-&#125;
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// db_impl.cc</span>
+<span class="token comment">// Convenience methods</span>
+Status <span class="token class-name">DBImpl</span><span class="token double-colon punctuation">::</span><span class="token function">Put</span><span class="token punctuation">(</span><span class="token keyword">const</span> WriteOptions<span class="token operator">&amp;</span> o<span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> key<span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> val<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">return</span> <span class="token class-name">DB</span><span class="token double-colon punctuation">::</span><span class="token function">Put</span><span class="token punctuation">(</span>o<span class="token punctuation">,</span> key<span class="token punctuation">,</span> val<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
-Status DBImpl::Delete(const WriteOptions&amp; options, const Slice&amp; key) &#123;
-  return DB::Delete(options, key);
-&#125;
+Status <span class="token class-name">DBImpl</span><span class="token double-colon punctuation">::</span><span class="token function">Delete</span><span class="token punctuation">(</span><span class="token keyword">const</span> WriteOptions<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> key<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">return</span> <span class="token class-name">DB</span><span class="token double-colon punctuation">::</span><span class="token function">Delete</span><span class="token punctuation">(</span>options<span class="token punctuation">,</span> key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
-&#x2F;&#x2F; Default implementations of convenience methods that subclasses of DB
-&#x2F;&#x2F; can call if they wish
-Status DB::Put(const WriteOptions&amp; opt, const Slice&amp; key, const Slice&amp; value) &#123;
-  WriteBatch batch;
-  batch.Put(key, value);
-  return Write(opt, &amp;batch);
-&#125;
+<span class="token comment">// Default implementations of convenience methods that subclasses of DB</span>
+<span class="token comment">// can call if they wish</span>
+Status <span class="token class-name">DB</span><span class="token double-colon punctuation">::</span><span class="token function">Put</span><span class="token punctuation">(</span><span class="token keyword">const</span> WriteOptions<span class="token operator">&amp;</span> opt<span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> key<span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> value<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  WriteBatch batch<span class="token punctuation">;</span>
+  batch<span class="token punctuation">.</span><span class="token function">Put</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> value<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token function">Write</span><span class="token punctuation">(</span>opt<span class="token punctuation">,</span> <span class="token operator">&amp;</span>batch<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
-Status DB::Delete(const WriteOptions&amp; opt, const Slice&amp; key) &#123;
-  WriteBatch batch;
-  batch.Delete(key);
-  return Write(opt, &amp;batch);
-&#125;
+Status <span class="token class-name">DB</span><span class="token double-colon punctuation">::</span><span class="token function">Delete</span><span class="token punctuation">(</span><span class="token keyword">const</span> WriteOptions<span class="token operator">&amp;</span> opt<span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> key<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  WriteBatch batch<span class="token punctuation">;</span>
+  batch<span class="token punctuation">.</span><span class="token function">Delete</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token function">Write</span><span class="token punctuation">(</span>opt<span class="token punctuation">,</span> <span class="token operator">&amp;</span>batch<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
-Status DBImpl::Write(const WriteOptions&amp; options, WriteBatch* updates);<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+Status <span class="token class-name">DBImpl</span><span class="token double-colon punctuation">::</span><span class="token function">Write</span><span class="token punctuation">(</span><span class="token keyword">const</span> WriteOptions<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> WriteBatch<span class="token operator">*</span> updates<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>所以，实际上，<code>DBImpl</code>的Put和Delete都是调用的其基类部分实现，但其基类部分的实现实际上是将操作丢到<code>WriteBatch</code>里面，然后统一用<code>Write</code>来进行处理, (为什么不直接调用<code>DBImpl::Write</code>?为了省查虚表的开销？）所以分析的关键是<code>Write</code>操作。</p>
 <p>整个Write操作可以用下面的这幅图来表示：</p>
 <p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-%E8%AF%BB%E5%86%99%E6%B5%81%E7%A8%8B/DBImplWriteProcess.png"></p>
@@ -563,72 +563,72 @@ Status DBImpl::Write(const WriteOptions&amp; options, WriteBatch* updates);<span
 <span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>从逻辑上理解，一个<code>Writer</code>(或request)值得是一次写请求，它包含了写必要的内容：要写入的数据：<code>batch</code>, 一个来自于<code>WriteOption</code>的选项：<code>bool sync</code>,以及一对用于同步的变量：<code>bool done</code>和<code>CondVar cv</code>。</p>
 <p>当线程进行一次写操作时，它将要写的数据以及<code>WriteOption</code>设置到一个<code>Writer</code>上，然后结合条件变量自旋等待该写操作是否完成。这正是<code>Write</code>代码中所做的操作：</p>
-<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">&#x2F;&#x2F; Step1: Add writer(request) to queue
-Writer w(&amp;mutex_);
-w.batch &#x3D; updates;
-w.sync &#x3D; options.sync;
-w.done &#x3D; false;
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// Step1: Add writer(request) to queue</span>
+Writer <span class="token function">w</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_<span class="token punctuation">)</span><span class="token punctuation">;</span>
+w<span class="token punctuation">.</span>batch <span class="token operator">=</span> updates<span class="token punctuation">;</span>
+w<span class="token punctuation">.</span>sync <span class="token operator">=</span> options<span class="token punctuation">.</span>sync<span class="token punctuation">;</span>
+w<span class="token punctuation">.</span>done <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
 
-MutexLock l(&amp;mutex_);
-writers_.push_back(&amp;w);
-while (!w.done &amp;&amp; &amp;w !&#x3D; writers_.front()) &#123;
-  w.cv.Wait();
-&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+MutexLock <span class="token function">l</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_<span class="token punctuation">)</span><span class="token punctuation">;</span>
+writers_<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>w<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token operator">!</span>w<span class="token punctuation">.</span>done <span class="token operator">&amp;&amp;</span> <span class="token operator">&amp;</span>w <span class="token operator">!=</span> writers_<span class="token punctuation">.</span><span class="token function">front</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  w<span class="token punctuation">.</span>cv<span class="token punctuation">.</span><span class="token function">Wait</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <hr>
 <p><strong>第二阶段：选出Leader，非Leader的线程自旋等待对应的Writer操作完成</strong></p>
-<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">while (!w.done &amp;&amp; &amp;w !&#x3D; writers_.front()) &#123;
-  w.cv.Wait();
-&#125;
-if (w.done) &#123;
-  return w.status;
-&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token operator">!</span>w<span class="token punctuation">.</span>done <span class="token operator">&amp;&amp;</span> <span class="token operator">&amp;</span>w <span class="token operator">!=</span> writers_<span class="token punctuation">.</span><span class="token function">front</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  w<span class="token punctuation">.</span>cv<span class="token punctuation">.</span><span class="token function">Wait</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>w<span class="token punctuation">.</span>done<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">return</span> w<span class="token punctuation">.</span>status<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>选出Leader(最近Raft看的有点多)的标准是该线程的<code>Writer</code>请求正好位于整个请求队列（<code>writers_</code>）的头部，满足此条件的线程会从上述while循环中离开，进行下一步操作，这也就意味着它已经成了leader，将执行后续的make room以及apply操作。</p>
 <hr>
 <p><strong>第三阶段：MakeRoom</strong></p>
-<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">Status status &#x3D; MakeRoomForWrite(updates &#x3D;&#x3D; nullptr);<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Status status <span class="token operator">=</span> <span class="token function">MakeRoomForWrite</span><span class="token punctuation">(</span>updates <span class="token operator">==</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
 <p>这一阶段直接调用<code>MakeRoomForWrite</code>函数为接下来要写入的请求分配足够的空间，整个过程会导致数据库内部的一系列变化，例如：immutable memtable的落盘，后台的compaction等等。最后的结果是active的memtable中应当有足够的位置来容纳接下来的batch write。</p>
 <hr>
 <p><strong>第四阶段：建立写入的batch并且apply到memtable中</strong></p>
 <p>（写到这里，我发现这四个阶段的划分并不合理，前三个干的事太少，而最后一个代码又太多；但是从逻辑上来看，最后一个阶段确实可以简单地用apply来概括。。。）</p>
-<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">uint64_t last_sequence &#x3D; versions_-&gt;LastSequence();
-Writer* last_writer &#x3D; &amp;w;
-if (status.ok() &amp;&amp; updates !&#x3D; nullptr) &#123;  &#x2F;&#x2F; nullptr batch is for compactions
-  &#x2F;&#x2F; last_writer要写入的数据并不保存在write_batch中，也就是，它的数据在接下来的apply中并不会写入到
-  &#x2F;&#x2F; memtable中
-  WriteBatch* write_batch &#x3D; BuildBatchGroup(&amp;last_writer);
-  WriteBatchInternal::SetSequence(write_batch, last_sequence + 1);
-  last_sequence +&#x3D; WriteBatchInternal::Count(write_batch);
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">uint64_t</span> last_sequence <span class="token operator">=</span> versions_<span class="token operator">-></span><span class="token function">LastSequence</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Writer<span class="token operator">*</span> last_writer <span class="token operator">=</span> <span class="token operator">&amp;</span>w<span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>status<span class="token punctuation">.</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> updates <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>  <span class="token comment">// nullptr batch is for compactions</span>
+  <span class="token comment">// last_writer要写入的数据并不保存在write_batch中，也就是，它的数据在接下来的apply中并不会写入到</span>
+  <span class="token comment">// memtable中</span>
+  WriteBatch<span class="token operator">*</span> write_batch <span class="token operator">=</span> <span class="token function">BuildBatchGroup</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>last_writer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token class-name">WriteBatchInternal</span><span class="token double-colon punctuation">::</span><span class="token function">SetSequence</span><span class="token punctuation">(</span>write_batch<span class="token punctuation">,</span> last_sequence <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  last_sequence <span class="token operator">+=</span> <span class="token class-name">WriteBatchInternal</span><span class="token double-colon punctuation">::</span><span class="token function">Count</span><span class="token punctuation">(</span>write_batch<span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-  &#x2F;&#x2F; Add to log and apply to memtable.  We can release the lock
-  &#x2F;&#x2F; during this phase since &amp;w is currently responsible for logging
-  &#x2F;&#x2F; and protects against concurrent loggers and concurrent writes
-  &#x2F;&#x2F; into mem_.
-  &#123;
-    mutex_.Unlock();
-    &#x2F;&#x2F; 将数据先写入logfile中，即WAL
-    status &#x3D; log_-&gt;AddRecord(WriteBatchInternal::Contents(write_batch));
-    bool sync_error &#x3D; false;
-    if (status.ok() &amp;&amp; W.sync) &#123;	&#x2F;&#x2F; 哦，原来WriteOptions中的sync指的是WAL的sync
-      status &#x3D; logfile_-&gt;Sync();
-      if (!status.ok()) &#123;
-        sync_error &#x3D; true;
-      &#125;
-    &#125;
-    if (status.ok()) &#123;
-      status &#x3D; WriteBatchInternal::InsertInto(write_batch, mem_);
-    &#125;
-    mutex_.Lock();
-    if (sync_error) &#123;
-      &#x2F;&#x2F; The state of the log file is indeterminate: the log record we
-      &#x2F;&#x2F; just added may or may not show up when the DB is re-opened.
-      &#x2F;&#x2F; So we force the DB into a mode where all future writes fail.
-      RecordBackgroundError(status);
-    &#125;
-  &#125;
-  if (write_batch &#x3D;&#x3D; tmp_batch_) tmp_batch_-&gt;Clear();
+  <span class="token comment">// Add to log and apply to memtable.  We can release the lock</span>
+  <span class="token comment">// during this phase since &amp;w is currently responsible for logging</span>
+  <span class="token comment">// and protects against concurrent loggers and concurrent writes</span>
+  <span class="token comment">// into mem_.</span>
+  <span class="token punctuation">&#123;</span>
+    mutex_<span class="token punctuation">.</span><span class="token function">Unlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 将数据先写入logfile中，即WAL</span>
+    status <span class="token operator">=</span> log_<span class="token operator">-></span><span class="token function">AddRecord</span><span class="token punctuation">(</span><span class="token class-name">WriteBatchInternal</span><span class="token double-colon punctuation">::</span><span class="token function">Contents</span><span class="token punctuation">(</span>write_batch<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">bool</span> sync_error <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>status<span class="token punctuation">.</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> W<span class="token punctuation">.</span>sync<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>	<span class="token comment">// 哦，原来WriteOptions中的sync指的是WAL的sync</span>
+      status <span class="token operator">=</span> logfile_<span class="token operator">-></span><span class="token function">Sync</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>status<span class="token punctuation">.</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        sync_error <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>status<span class="token punctuation">.</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      status <span class="token operator">=</span> <span class="token class-name">WriteBatchInternal</span><span class="token double-colon punctuation">::</span><span class="token function">InsertInto</span><span class="token punctuation">(</span>write_batch<span class="token punctuation">,</span> mem_<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    mutex_<span class="token punctuation">.</span><span class="token function">Lock</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>sync_error<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token comment">// The state of the log file is indeterminate: the log record we</span>
+      <span class="token comment">// just added may or may not show up when the DB is re-opened.</span>
+      <span class="token comment">// So we force the DB into a mode where all future writes fail.</span>
+      <span class="token function">RecordBackgroundError</span><span class="token punctuation">(</span>status<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>write_batch <span class="token operator">==</span> tmp_batch_<span class="token punctuation">)</span> tmp_batch_<span class="token operator">-></span><span class="token function">Clear</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-  versions_-&gt;SetLastSequence(last_sequence);
-&#125;
+  versions_<span class="token operator">-></span><span class="token function">SetLastSequence</span><span class="token punctuation">(</span>last_sequence<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>上述处理的逻辑不难理解，主要分为以下几个步骤：</p>
 <ul>
@@ -639,21 +639,21 @@ if (status.ok() &amp;&amp; updates !&#x3D; nullptr) &#123;  &#x2F;&#x2F; nullptr
 <p><code>tmp_batch</code>在<code>BuildBatchGroup</code>中被使用，是一个类成员变量。</p>
 <hr>
 <p><strong>第五阶段：唤醒所有等待Writer写入的线程</strong></p>
-<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">while (true) &#123;
-  Writer* ready &#x3D; writers_.front();
-  writers_.pop_front();
-  if (ready !&#x3D; &amp;w) &#123;	&#x2F;&#x2F; 判断是不是leader，是的话就不能唤醒，否则导致死锁
-    ready-&gt;status &#x3D; status;	&#x2F;&#x2F; 设置apply记录时的状态给上层
-    ready-&gt;done &#x3D; true;	
-    ready-&gt;cv.Signal(); &#x2F;&#x2F; 设置done为true用于唤醒等待的线程
-  &#125;	
-  if (ready &#x3D;&#x3D; last_writer) break;	
-&#125;
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  Writer<span class="token operator">*</span> ready <span class="token operator">=</span> writers_<span class="token punctuation">.</span><span class="token function">front</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  writers_<span class="token punctuation">.</span><span class="token function">pop_front</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>ready <span class="token operator">!=</span> <span class="token operator">&amp;</span>w<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>	<span class="token comment">// 判断是不是leader，是的话就不能唤醒，否则导致死锁</span>
+    ready<span class="token operator">-></span>status <span class="token operator">=</span> status<span class="token punctuation">;</span>	<span class="token comment">// 设置apply记录时的状态给上层</span>
+    ready<span class="token operator">-></span>done <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>	
+    ready<span class="token operator">-></span>cv<span class="token punctuation">.</span><span class="token function">Signal</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 设置done为true用于唤醒等待的线程</span>
+  <span class="token punctuation">&#125;</span>	
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>ready <span class="token operator">==</span> last_writer<span class="token punctuation">)</span> <span class="token keyword">break</span><span class="token punctuation">;</span>	
+<span class="token punctuation">&#125;</span>
 
-&#x2F;&#x2F; Notify new head of write queue
-if (!writers_.empty()) &#123;
-  writers_.front()-&gt;cv.Signal();	&#x2F;&#x2F; 找下一个leader
-&#125;
+<span class="token comment">// Notify new head of write queue</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>writers_<span class="token punctuation">.</span><span class="token function">empty</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  writers_<span class="token punctuation">.</span><span class="token function">front</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">-></span>cv<span class="token punctuation">.</span><span class="token function">Signal</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>	<span class="token comment">// 找下一个leader</span>
+<span class="token punctuation">&#125;</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>最后一步是唤醒所有等待的线程。</p>
 <p>这里会将每一个写入的<code>writer</code>的status设置为在执行：<code>WriteBatchInternal::InsertInto(write_batch, mem_)</code>的返回值，大部分情况下这个值都会是Ok，但是<code>InsertInto</code>本身执行如果在中间某个步骤出现了错误，会导致提前返回错误码，从而也会导致这里在执行错误之后的所有writer都获得错误的status。这从逻辑上是很好理解的，对于一个正常运行的系统：一旦一个写入错误，之后的写入都不应该继续进行，因此应该返回错误码。</p>
@@ -663,20 +663,20 @@ if (!writers_.empty()) &#123;
 <p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-%E8%AF%BB%E5%86%99%E6%B5%81%E7%A8%8B/LevelDBWriteOverview.jpg" width="70%"></p>
 <hr>
 <h2 id="DBImpl读流程-Get"><a href="#DBImpl读流程-Get" class="headerlink" title="DBImpl读流程:Get"></a>DBImpl读流程:Get</h2><p>LevelDB的读操作流程相比之下比较简单，根据设计：LevelDB在读时会以<code>memetable-&gt; immutable memtable-&gt;files</code>的过程进行读取，直到其中某个步骤完成读取为止：</p>
-<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">&#123;
-  mutex_.Unlock();
-  &#x2F;&#x2F; First look in the memtable, then in the immutable memtable (if any).
-  LookupKey lkey(key, snapshot);
-  if (mem-&gt;Get(lkey, value, &amp;s)) &#123;
-    &#x2F;&#x2F; Done
-  &#125; else if (imm !&#x3D; nullptr &amp;&amp; imm-&gt;Get(lkey, value, &amp;s)) &#123;
-    &#x2F;&#x2F; Done
-  &#125; else &#123;
-    s &#x3D; current-&gt;Get(options, lkey, value, &amp;stats);
-    have_stat_update &#x3D; true;
-  &#125;
-  mutex_.Lock();
-&#125;
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token punctuation">&#123;</span>
+  mutex_<span class="token punctuation">.</span><span class="token function">Unlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// First look in the memtable, then in the immutable memtable (if any).</span>
+  LookupKey <span class="token function">lkey</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> snapshot<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>mem<span class="token operator">-></span><span class="token function">Get</span><span class="token punctuation">(</span>lkey<span class="token punctuation">,</span> value<span class="token punctuation">,</span> <span class="token operator">&amp;</span>s<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// Done</span>
+  <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>imm <span class="token operator">!=</span> <span class="token keyword">nullptr</span> <span class="token operator">&amp;&amp;</span> imm<span class="token operator">-></span><span class="token function">Get</span><span class="token punctuation">(</span>lkey<span class="token punctuation">,</span> value<span class="token punctuation">,</span> <span class="token operator">&amp;</span>s<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// Done</span>
+  <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+    s <span class="token operator">=</span> current<span class="token operator">-></span><span class="token function">Get</span><span class="token punctuation">(</span>options<span class="token punctuation">,</span> lkey<span class="token punctuation">,</span> value<span class="token punctuation">,</span> <span class="token operator">&amp;</span>stats<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    have_stat_update <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  mutex_<span class="token punctuation">.</span><span class="token function">Lock</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>其中<code>current</code>是一个<code>Version</code>结构体，可以认为它类似于一个记录全局元数据的数据结构，因此同样也对多个SSTFile进行管理，因此可以通过它对所有SST文件进行搜索。</p>
 <p>除此之外，<code>Get</code>还有一些诸如对memtable和immtable进行引用和解引用的操作，这里不再说明，一方面是因为我们还不明确<code>Ref</code>的作用，另一方面它们对主要逻辑确实无足轻重。</p>
@@ -703,37 +703,37 @@ if (!writers_.empty()) &#123;
 <p>上述代码中，首先进行一系列的判断，然后将迭代所有<code>Writer Queue</code>中的Writer来创建写入batch，在这之前，先设置遍历的起始位置：<code>Writer* first = writers_.front();</code>，然后是设定这个batch能容纳的数据大小：<code>max_size</code>。这里的判断逻辑首先设定起始大小为1MB(<code>1 &lt;&lt; 20</code>), 然后通过判断第一个batch的大小是否小于<code>128K</code>来决定是否扩容这个<code>max_size</code>。这里的逻辑让我有点疑惑，注释说这样是为了让小的写入不被拖慢。</p>
 <p><code>size</code>记录了该batch当前的大小，因为first的batch必须被添加到write_batch中，所以其被初始化为<code>first-&gt;batch</code>的size。</p>
 <p>接下来是遍历<code>WriterQueue</code>中的元素并添加到写入的batch中，直到size超出前面的限制为止。这里添加的粒度是一个Writer的Batch，而不是一条记录：</p>
-<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">*last_writer &#x3D; first;
-std::deque&lt;Writer*&gt;::iterator iter &#x3D; writers_.begin();
-++iter;  &#x2F;&#x2F; Advance past &quot;first&quot;
-for (; iter !&#x3D; writers_.end(); ++iter) &#123;
-  Writer* w &#x3D; *iter;
-  if (w-&gt;sync &amp;&amp; !first-&gt;sync) &#123;
-    &#x2F;&#x2F; Do not include a sync write into a batch handled by a non-sync write.
-    break;
-  &#125;	
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token operator">*</span>last_writer <span class="token operator">=</span> first<span class="token punctuation">;</span>
+std<span class="token double-colon punctuation">::</span>deque<span class="token operator">&lt;</span>Writer<span class="token operator">*</span><span class="token operator">></span><span class="token double-colon punctuation">::</span>iterator iter <span class="token operator">=</span> writers_<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">++</span>iter<span class="token punctuation">;</span>  <span class="token comment">// Advance past "first"</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token punctuation">;</span> iter <span class="token operator">!=</span> writers_<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span>iter<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  Writer<span class="token operator">*</span> w <span class="token operator">=</span> <span class="token operator">*</span>iter<span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>w<span class="token operator">-></span>sync <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span>first<span class="token operator">-></span>sync<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// Do not include a sync write into a batch handled by a non-sync write.</span>
+    <span class="token keyword">break</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>	
 
-  if (w-&gt;batch !&#x3D; nullptr) &#123;
-    size +&#x3D; WriteBatchInternal::ByteSize(w-&gt;batch);
-    if (size &gt; max_size) &#123;
-      &#x2F;&#x2F; Do not make batch too big
-      break;
-    &#125;
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>w<span class="token operator">-></span>batch <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    size <span class="token operator">+=</span> <span class="token class-name">WriteBatchInternal</span><span class="token double-colon punctuation">::</span><span class="token function">ByteSize</span><span class="token punctuation">(</span>w<span class="token operator">-></span>batch<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>size <span class="token operator">></span> max_size<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token comment">// Do not make batch too big</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
 
-    &#x2F;&#x2F; Append to *result
-    if (result &#x3D;&#x3D; first-&gt;batch) &#123;
-      &#x2F;&#x2F; Switch to temporary batch instead of disturbing caller&#39;s batch
-      result &#x3D; tmp_batch_;
-      assert(WriteBatchInternal::Count(result) &#x3D;&#x3D; 0);
-      WriteBatchInternal::Append(result, first-&gt;batch);
-    &#125;
-    WriteBatchInternal::Append(result, w-&gt;batch);
-  &#125;
-  *last_writer &#x3D; w;
-&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+    <span class="token comment">// Append to *result</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>result <span class="token operator">==</span> first<span class="token operator">-></span>batch<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token comment">// Switch to temporary batch instead of disturbing caller's batch</span>
+      result <span class="token operator">=</span> tmp_batch_<span class="token punctuation">;</span>
+      <span class="token function">assert</span><span class="token punctuation">(</span><span class="token class-name">WriteBatchInternal</span><span class="token double-colon punctuation">::</span><span class="token function">Count</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token class-name">WriteBatchInternal</span><span class="token double-colon punctuation">::</span><span class="token function">Append</span><span class="token punctuation">(</span>result<span class="token punctuation">,</span> first<span class="token operator">-></span>batch<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token class-name">WriteBatchInternal</span><span class="token double-colon punctuation">::</span><span class="token function">Append</span><span class="token punctuation">(</span>result<span class="token punctuation">,</span> w<span class="token operator">-></span>batch<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token operator">*</span>last_writer <span class="token operator">=</span> w<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <ul>
 <li><p>第一个值得注意的地方在第六行的判断：不同WriteOptions的写入绝不能放在一个Batch中。但问题是，为什么不写成：</p>
-<pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">if (w-&gt;sync !&#x3D; first-&gt;sync)<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">if</span> <span class="token punctuation">(</span>w<span class="token operator">-></span>sync <span class="token operator">!=</span> first<span class="token operator">-></span>sync<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
 <p>也就是说，如果<code>first-&gt;sync</code>是true，而<code>w-&gt;sync</code>是false的话，也能加入到这个batch中。这是因为仔细阅读<code>DBImpl::Write</code>的逻辑会发现，在batch写入WAL之后，判断是否要sync的依据是<code>options.sync</code>,实际上也就是此处的<code>first-&gt;sync</code>。因此，如果<code>w-&gt;sync==false &amp;&amp; first-&gt;sync==true</code>实际上是在说我们对后面的写入进行了一次不必要的persist，但正确性上没有问题。</p>
 </li>
 <li><p>该循环会在<code>size &gt; max_size</code>时退出，说明write_batch的大小已经超过了限制。</p>
