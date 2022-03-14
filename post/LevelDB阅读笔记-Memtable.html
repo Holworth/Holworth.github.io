@@ -1,0 +1,1508 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="LevelDB阅读笔记-Memtable, Hexo">
+    <meta name="description" content="LevelDB中的MemTable在LevelDB中，MemTable是一个内存数据结构，它被用于暂存写操作，并在合适的时候转换为immutable的memtable，最后转为SSTable文件写入磁盘。MemTable实际上只是一个提供了">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+    <title>LevelDB阅读笔记-Memtable | Hexo</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+
+    <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
+    <link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+    <link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+    <link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+    <link rel="stylesheet" type="text/css" href="/css/matery.css">
+    <link rel="stylesheet" type="text/css" href="/css/my.css">
+
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+
+
+
+<body>
+    <header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="/" class="waves-effect waves-light">
+                    
+                    <img src="/medias/logo.png" class="logo-img" alt="LOGO">
+                    
+                    <span class="logo-span">Hexo</span>
+                </a>
+            </div>
+            
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/" class="waves-effect waves-light">
+      
+      <i class="fas fa-home" style="zoom: 0.6;"></i>
+      
+      <span>首页</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/tags" class="waves-effect waves-light">
+      
+      <i class="fas fa-tags" style="zoom: 0.6;"></i>
+      
+      <span>标签</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/categories" class="waves-effect waves-light">
+      
+      <i class="fas fa-bookmark" style="zoom: 0.6;"></i>
+      
+      <span>分类</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/archives" class="waves-effect waves-light">
+      
+      <i class="fas fa-archive" style="zoom: 0.6;"></i>
+      
+      <span>归档</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/about" class="waves-effect waves-light">
+      
+      <i class="fas fa-user-circle" style="zoom: 0.6;"></i>
+      
+      <span>关于</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/contact" class="waves-effect waves-light">
+      
+      <i class="fas fa-comments" style="zoom: 0.6;"></i>
+      
+      <span>留言板</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/friends" class="waves-effect waves-light">
+      
+      <i class="fas fa-address-book" style="zoom: 0.6;"></i>
+      
+      <span>友情链接</span>
+    </a>
+    
+  </li>
+  
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="搜索" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/medias/logo.png" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">Hexo</div>
+        <div class="logo-desc">
+            
+            Never really desperate, only the lost of the soul.
+            
+        </div>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li class="m-nav-item">
+	  
+		<a href="/" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-home"></i>
+			
+			首页
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/tags" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-tags"></i>
+			
+			标签
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/categories" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-bookmark"></i>
+			
+			分类
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/archives" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-archive"></i>
+			
+			归档
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/about" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-user-circle"></i>
+			
+			关于
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/contact" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-comments"></i>
+			
+			留言板
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/friends" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-address-book"></i>
+			
+			友情链接
+		</a>
+          
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/blinkfox/hexo-theme-matery" class="waves-effect waves-light" target="_blank">
+                <i class="fab fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+</div>
+
+
+        </div>
+
+        
+            <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/blinkfox/hexo-theme-matery" class="github-corner tooltipped hide-on-med-and-down" target="_blank"
+   data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewBox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor" class="octo-body"></path>
+    </svg>
+</a>
+        
+    </nav>
+
+</header>
+
+    
+
+
+
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/18.jpg')">
+    <div class="container" style="right: 0px;left: 0px;">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <h1 class="description center-align post-title">LevelDB阅读笔记-Memtable</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<main class="post-container content">
+
+    
+    <link rel="stylesheet" href="/libs/tocbot/tocbot.css">
+<style>
+    #articleContent h1::before,
+    #articleContent h2::before,
+    #articleContent h3::before,
+    #articleContent h4::before,
+    #articleContent h5::before,
+    #articleContent h6::before {
+        display: block;
+        content: " ";
+        height: 100px;
+        margin-top: -100px;
+        visibility: hidden;
+    }
+
+    #articleContent :focus {
+        outline: none;
+    }
+
+    .toc-fixed {
+        position: fixed;
+        top: 64px;
+    }
+
+    .toc-widget {
+        width: 345px;
+        padding-left: 20px;
+    }
+
+    .toc-widget .toc-title {
+        padding: 35px 0 15px 17px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        line-height: 1.5rem;
+    }
+
+    .toc-widget ol {
+        padding: 0;
+        list-style: none;
+    }
+
+    #toc-content {
+        padding-bottom: 30px;
+        overflow: auto;
+    }
+
+    #toc-content ol {
+        padding-left: 10px;
+    }
+
+    #toc-content ol li {
+        padding-left: 10px;
+    }
+
+    #toc-content .toc-link:hover {
+        color: #42b983;
+        font-weight: 700;
+        text-decoration: underline;
+    }
+
+    #toc-content .toc-link::before {
+        background-color: transparent;
+        max-height: 25px;
+
+        position: absolute;
+        right: 23.5vw;
+        display: block;
+    }
+
+    #toc-content .is-active-link {
+        color: #42b983;
+    }
+
+    #floating-toc-btn {
+        position: fixed;
+        right: 15px;
+        bottom: 76px;
+        padding-top: 15px;
+        margin-bottom: 0;
+        z-index: 998;
+    }
+
+    #floating-toc-btn .btn-floating {
+        width: 48px;
+        height: 48px;
+    }
+
+    #floating-toc-btn .btn-floating i {
+        line-height: 48px;
+        font-size: 1.4rem;
+    }
+</style>
+<div class="row">
+    <div id="main-content" class="col s12 m12 l9">
+        <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            <div class="row tag-cate">
+                <div class="col s7">
+                    
+                    <div class="article-tag">
+                        
+                            <a href="/tags/LevelDB/">
+                                <span class="chip bg-color">LevelDB</span>
+                            </a>
+                        
+                            <a href="/tags/C/">
+                                <span class="chip bg-color">C++</span>
+                            </a>
+                        
+                            <a href="/tags/KV/">
+                                <span class="chip bg-color">KV</span>
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+                <div class="col s5 right-align">
+                    
+                    <div class="post-cate">
+                        <i class="fas fa-bookmark fa-fw icon-category"></i>
+                        
+                            <a href="/categories/Coding/" class="post-category">
+                                Coding
+                            </a>
+                        
+                            <a href="/categories/Coding/Database/" class="post-category">
+                                Database
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div class="post-info">
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
+                    2022-03-09
+                </div>
+                
+
+                
+
+                
+
+                
+
+                
+            </div>
+        </div>
+        <hr class="clearfix">
+
+        
+        <!-- 是否加载使用自带的 prismjs. -->
+        <link rel="stylesheet" href="/libs/prism/prism.css">
+        
+
+        
+
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h1 id="LevelDB中的MemTable"><a href="#LevelDB中的MemTable" class="headerlink" title="LevelDB中的MemTable"></a>LevelDB中的MemTable</h1><p>在LevelDB中，MemTable是一个内存数据结构，它被用于暂存写操作，并在合适的时候转换为immutable的memtable，最后转为SSTable文件写入磁盘。MemTable实际上只是一个提供了读写操作的接口，它负责将外界的key-value数据封装，实际的数据存储和查询都是由内部的<code>SkipList</code>索引来完成的，因此我们将着重分析SkipList的源码。</p>
+<hr>
+<h2 id="MemTable"><a href="#MemTable" class="headerlink" title="MemTable"></a>MemTable</h2><p><code>MemTable</code>类包含了以下数据成员和接口：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">class</span> <span class="token class-name">MemTable</span> <span class="token punctuation">&#123;</span>
+  Iterator<span class="token operator">*</span> <span class="token function">NewIterator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">void</span> <span class="token function">Add</span><span class="token punctuation">(</span>SequenceNumber seq<span class="token punctuation">,</span> ValueType type<span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> key<span class="token punctuation">,</span>
+           <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> value<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">bool</span> <span class="token function">Get</span><span class="token punctuation">(</span><span class="token keyword">const</span> LookupKey<span class="token operator">&amp;</span> key<span class="token punctuation">,</span> std<span class="token double-colon punctuation">::</span>string<span class="token operator">*</span> value<span class="token punctuation">,</span> Status<span class="token operator">*</span> s<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+ <span class="token keyword">private</span><span class="token operator">:</span>
+  <span class="token keyword">struct</span> <span class="token class-name">KeyComparator</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">const</span> InternalKeyComparator comparator<span class="token punctuation">;</span>
+    <span class="token keyword">explicit</span> <span class="token function">KeyComparator</span><span class="token punctuation">(</span><span class="token keyword">const</span> InternalKeyComparator<span class="token operator">&amp;</span> c<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token function">comparator</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+    <span class="token keyword">int</span> <span class="token keyword">operator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> a<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> b<span class="token punctuation">)</span> <span class="token keyword">const</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">typedef</span> SkipList<span class="token operator">&lt;</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">,</span> KeyComparator<span class="token operator">></span> Table<span class="token punctuation">;</span>
+
+  KeyComparator comparator_<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> refs_<span class="token punctuation">;</span>
+  Arena arena_<span class="token punctuation">;</span>
+  Table table_<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<ul>
+<li><code>MemTable</code>作为一个内存索引结构，提供了<code>Add()</code>方法用于插入或删除指定的键值对，<code>Get()</code>方法用于对指定的key进行点查询, <code>NewIterator</code>方法提供了获得迭代器的手段，方便用于范围查询。</li>
+<li><code>KeyComparator</code>是一个<code>MemTable</code>内部的<code>Comparator</code>, 在后面会看到，<code>MemTable</code>会将要求插入的key和value按照<code>InternalKey</code>的方式进行序列化，序列化得到的字节数组是key和value的组合，因此需要一个<code>comparator</code>来提供对该字节数组的比较功能。</li>
+<li><code>SkipList</code>实现了一个模板跳表类，它是MemTable的核心结构。<code>Arena</code>是该MemTable的内存分配器，从而避免了多次进行new等调用。</li>
+<li><code>reference counter</code>被用于维护整个<code>MemTable</code>的生命周期，只有在<code>refs_</code>大于0时该MemTable才可以被使用，当等于0时，该memtable会被调用<code>delete</code>释放内存。但<code>MemTable</code>的析构函数是<code>private</code>的，这意味着外界无法临时创建一个栈上的<code>MemTable</code>对象，也无法显式地delete一个动态分配的<code>MemTable</code>对象。</li>
+</ul>
+<h3 id="方法实现"><a href="#方法实现" class="headerlink" title="方法实现"></a>方法实现</h3><p><strong>MemTable::Add</strong></p>
+<p>Add方法将传入的<code>Key, SequenceNumber, ValueType, Value</code>等信息序列化为一个字符数组，然后直接调用<code>SkipList</code>的Insert接口进行插入。重点在于序列化的过程，代码的注释中有明确的说明：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token class-name">MemTable</span><span class="token double-colon punctuation">::</span><span class="token function">Add</span><span class="token punctuation">(</span>SequenceNumber s<span class="token punctuation">,</span> ValueType type<span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> key<span class="token punctuation">,</span>
+                   <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> value<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// Format of an entry is concatenation of:</span>
+  <span class="token comment">//  key_size     : varint32 of internal_key.size()</span>
+  <span class="token comment">//  key bytes    : char[internal_key.size()]</span>
+  <span class="token comment">//  value_size   : varint32 of value.size()</span>
+  <span class="token comment">//  value bytes  : char[value.size()]</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>传入的参数先被拼接为一个<code>InternalKey</code>, 然后将该<code>InternalKey</code>的长度按照VarInt32编码写入数组头部，然后依次是internal_key, ValueSize和Valuesize。此处不再赘述代码。了解了MemTable内部存储一个key-value pair的格式之后，我们可以简单描述一下<code>KeyComparator</code>的比较函数的实现：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> MemTable<span class="token double-colon punctuation">::</span><span class="token class-name">KeyComparator</span><span class="token double-colon punctuation">::</span><span class="token keyword">operator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> aptr<span class="token punctuation">,</span>
+                                        <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> bptr<span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// Internal keys are encoded as length-prefixed strings.</span>
+  Slice a <span class="token operator">=</span> <span class="token function">GetLengthPrefixedSlice</span><span class="token punctuation">(</span>aptr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Slice b <span class="token operator">=</span> <span class="token function">GetLengthPrefixedSlice</span><span class="token punctuation">(</span>bptr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> comparator<span class="token punctuation">.</span><span class="token function">Compare</span><span class="token punctuation">(</span>a<span class="token punctuation">,</span> b<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">static</span> Slice <span class="token function">GetLengthPrefixedSlice</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> data<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">uint32_t</span> len<span class="token punctuation">;</span>
+  <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> p <span class="token operator">=</span> data<span class="token punctuation">;</span>
+  p <span class="token operator">=</span> <span class="token function">GetVarint32Ptr</span><span class="token punctuation">(</span>p<span class="token punctuation">,</span> p <span class="token operator">+</span> <span class="token number">5</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>len<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// +5: we assume "p" is not corrupted</span>
+  <span class="token keyword">return</span> <span class="token function">Slice</span><span class="token punctuation">(</span>p<span class="token punctuation">,</span> len<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>KeyComparator</code>从一个按照上述方式序列化的字符数组中通过<code>GetLengthPrefixedSlice()</code>调用获得其中的<code>InternalKey</code>部分，然后直接调用内部保存的<code>InternalKeyComparator</code>的比较函数进行比较。</p>
+<p><code>GetLenghtPrefixedSlice()</code>的名字直截了当地说明了该函数的作用，对于以varied int表示长度，随后紧接着key的内容的表示方式，该函数返回一个Slice对象用于引用其内容。而MemTable中经过序列化后的key-value pair正好符合这种模式。</p>
+<hr>
+<p><strong>MemTable::Get</strong></p>
+<p><code>MemTable</code>通过<code>Get</code>来获得一个指定key对应的value的值，根据注释中的叙述，当在MemTable中找到该key或者该key被删除时，返回true，否则返回false。因此，True实际上说明了该key的最新版本在MemTable中；返回False实际上是提醒调用者该key不在MemTable中，可能需要到SSTable中去找。</p>
+<p><code>Get</code>调用分为两步，首先调用<code>SkipList</code>的迭代器的<code>Seek</code>找到该key的大概位置，然后比较迭代器指向的key是否与User key相同。最后根据类型进行返回。这里比较是否相同时没有使用<code>InternalKeyComparator</code>比较，而是直接使用<code>InternalKeyComparator</code>内部的User Key Comparator进行比较。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">bool</span> <span class="token class-name">MemTable</span><span class="token double-colon punctuation">::</span><span class="token function">Get</span><span class="token punctuation">(</span><span class="token keyword">const</span> LookupKey<span class="token operator">&amp;</span> key<span class="token punctuation">,</span> std<span class="token double-colon punctuation">::</span>string<span class="token operator">*</span> value<span class="token punctuation">,</span> Status<span class="token operator">*</span> s<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// Find target key in skiplist</span>
+  Slice memkey <span class="token operator">=</span> key<span class="token punctuation">.</span><span class="token function">memtable_key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Table<span class="token double-colon punctuation">::</span>Iterator <span class="token function">iter</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>table_<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  iter<span class="token punctuation">.</span><span class="token function">Seek</span><span class="token punctuation">(</span>memkey<span class="token punctuation">.</span><span class="token function">data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>iter<span class="token punctuation">.</span><span class="token function">Valid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> entry <span class="token operator">=</span> iter<span class="token punctuation">.</span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">uint32_t</span> key_length<span class="token punctuation">;</span>
+    <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> key_ptr <span class="token operator">=</span> <span class="token function">GetVarint32Ptr</span><span class="token punctuation">(</span>entry<span class="token punctuation">,</span> entry <span class="token operator">+</span> <span class="token number">5</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>key_length<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// Check if matches user key</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>comparator_<span class="token punctuation">.</span>comparator<span class="token punctuation">.</span><span class="token function">user_comparator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">-></span><span class="token function">Compare</span><span class="token punctuation">(</span>
+            <span class="token function">Slice</span><span class="token punctuation">(</span>key_ptr<span class="token punctuation">,</span> key_length <span class="token operator">-</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">,</span> key<span class="token punctuation">.</span><span class="token function">user_key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			<span class="token comment">// Return based on ValueType</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<p><strong>Iterator</strong></p>
+<p><code>MemTable::Iterator</code>继承自<code>Iterator</code>抽象基类，用于负责遍历<code>MemTable</code>中的元素。一个<code>Iterator</code>对象提供了多个操作接口用于访问或修改该Iterator对应的元素。为了方便理解，可以将此处的<code>Iterator</code>接口与STL中的容器迭代器操作接口对比，例如：<code>Iterator::SeekToFirst</code>对应于<code>std::vector&lt;&gt;::begin()</code>， <code>Iterator::Next()</code>对应于<code>std::vector::Iterator::operator++</code>等等。</p>
+<p>由于LevelDB是一个KV存储系统，因此迭代器需要提供key-value的获取接口。<code>Iterator</code>基类规定了<code>Iterator::key()</code>和<code>Iterator::value()</code>接口用于获取迭代器关联元素的key和value，且返回值为<code>Slice</code>。但LevelDB内部有多种key，因此不同数据结构的迭代器返回的key的类型也不尽相同。例如，<code>MemTable::Iterator</code>的key的调用返回的是一个<code>InternalKey</code>, 而<code>SkipList::Iterator</code>的key调用返回的则是一个以<code>key_length</code>作为前缀的key的字符序列。</p>
+<p>下面简单描述一下<code>MemTableIterator</code>的实现:</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">class</span> <span class="token class-name">MemTableIterator</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Iterator</span></span> <span class="token punctuation">&#123;</span>
+ <span class="token keyword">public</span><span class="token operator">:</span>
+  <span class="token keyword">explicit</span> <span class="token function">MemTableIterator</span><span class="token punctuation">(</span>MemTable<span class="token double-colon punctuation">::</span>Table<span class="token operator">*</span> table<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token function">iter_</span><span class="token punctuation">(</span>table<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+
+  <span class="token function">MemTableIterator</span><span class="token punctuation">(</span><span class="token keyword">const</span> MemTableIterator<span class="token operator">&amp;</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token keyword">delete</span><span class="token punctuation">;</span>
+  MemTableIterator<span class="token operator">&amp;</span> <span class="token keyword">operator</span><span class="token operator">=</span><span class="token punctuation">(</span><span class="token keyword">const</span> MemTableIterator<span class="token operator">&amp;</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token keyword">delete</span><span class="token punctuation">;</span>
+
+  <span class="token operator">~</span><span class="token function">MemTableIterator</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">override</span> <span class="token operator">=</span> <span class="token keyword">default</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">bool</span> <span class="token function">Valid</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token keyword">override</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> iter_<span class="token punctuation">.</span><span class="token function">Valid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+  <span class="token keyword">void</span> <span class="token function">Seek</span><span class="token punctuation">(</span><span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> k<span class="token punctuation">)</span> <span class="token keyword">override</span> <span class="token punctuation">&#123;</span> iter_<span class="token punctuation">.</span><span class="token function">Seek</span><span class="token punctuation">(</span><span class="token function">EncodeKey</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>tmp_<span class="token punctuation">,</span> k<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+  <span class="token keyword">void</span> <span class="token function">SeekToFirst</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">override</span> <span class="token punctuation">&#123;</span> iter_<span class="token punctuation">.</span><span class="token function">SeekToFirst</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+  <span class="token keyword">void</span> <span class="token function">SeekToLast</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">override</span> <span class="token punctuation">&#123;</span> iter_<span class="token punctuation">.</span><span class="token function">SeekToLast</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+  <span class="token keyword">void</span> <span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">override</span> <span class="token punctuation">&#123;</span> iter_<span class="token punctuation">.</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+  <span class="token keyword">void</span> <span class="token function">Prev</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">override</span> <span class="token punctuation">&#123;</span> iter_<span class="token punctuation">.</span><span class="token function">Prev</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+  Slice <span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token keyword">override</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> <span class="token function">GetLengthPrefixedSlice</span><span class="token punctuation">(</span>iter_<span class="token punctuation">.</span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+  Slice <span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token keyword">override</span> <span class="token punctuation">&#123;</span>
+    Slice key_slice <span class="token operator">=</span> <span class="token function">GetLengthPrefixedSlice</span><span class="token punctuation">(</span>iter_<span class="token punctuation">.</span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token function">GetLengthPrefixedSlice</span><span class="token punctuation">(</span>key_slice<span class="token punctuation">.</span><span class="token function">data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> key_slice<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+
+ <span class="token keyword">private</span><span class="token operator">:</span>
+  MemTable<span class="token double-colon punctuation">::</span>Table<span class="token double-colon punctuation">::</span>Iterator iter_<span class="token punctuation">;</span>
+  std<span class="token double-colon punctuation">::</span>string tmp_<span class="token punctuation">;</span>  <span class="token comment">// For passing to EncodeKey</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>MemTableIterator</code>的迭代功能实际上是通过<code>SkipList</code>的迭代功能实现的，每当调用<code>SeekToFirst</code>,<code>Next</code>等接口时，<code>MemTableIterator</code>会实际上调用<code>iter_</code>的对应接口。而对于<code>key(), value()，seek()</code>等接口，<code>MemTableIterator</code>需要在<code>SkipList::Iterator</code>返回的PrefixLengthKey格式与<code>InternalKey</code>格式之间进行转换。</p>
+<p>例如，<code>MemTableIterator</code>通过<code>EncodeKey</code>接口将一个<code>InternalKey</code>转换为PrefixLength格式，并放置在<code>tmp_</code>中；通过<code>GetLengthPrefixSlice</code>函数将一个<code>SkipList::Iterator</code>返回的PrefixLength格式转换为<code>InternalKey</code>格式。</p>
+<hr>
+<h2 id="SkipList"><a href="#SkipList" class="headerlink" title="SkipList"></a>SkipList</h2><p>SkipList是一种有序的内存索引结构，它相比红黑树等树形的有序索引实现起来更加简单。在LevelDB中，SkipList作为一个通用的基础组件，被放置在<code>util</code>文件夹而不是<code>db</code>文件夹中。SkipList的接口定义如下：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Key</span><span class="token punctuation">,</span> <span class="token keyword">class</span> <span class="token class-name">Comparator</span><span class="token operator">></span>
+<span class="token keyword">class</span> <span class="token class-name">SkipList</span> <span class="token punctuation">&#123;</span>
+ <span class="token keyword">private</span><span class="token operator">:</span>
+  <span class="token keyword">struct</span> <span class="token class-name">Node</span><span class="token punctuation">;</span>
+
+ <span class="token keyword">public</span><span class="token operator">:</span>
+  <span class="token keyword">explicit</span> <span class="token function">SkipList</span><span class="token punctuation">(</span>Comparator cmp<span class="token punctuation">,</span> Arena<span class="token operator">*</span> arena<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// Insert key into the list.</span>
+  <span class="token comment">// REQUIRES: nothing that compares equal to key is currently in the list.</span>
+  <span class="token keyword">void</span> <span class="token function">Insert</span><span class="token punctuation">(</span><span class="token keyword">const</span> Key<span class="token operator">&amp;</span> key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// Returns true iff an entry that compares equal to key is in the list.</span>
+  <span class="token keyword">bool</span> <span class="token function">Contains</span><span class="token punctuation">(</span><span class="token keyword">const</span> Key<span class="token operator">&amp;</span> key<span class="token punctuation">)</span> <span class="token keyword">const</span><span class="token punctuation">;</span>
+ 
+  <span class="token keyword">class</span> <span class="token class-name">Iterator</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>SkipList是一个模板类，其中<code>Key</code>用于指明该有序索引存储的键的类型；<code>Comparator</code>用于指明该有序索引进行序的比较时使用的方式。SkipList提供了两个公共接口用于使用：</p>
+<ul>
+<li><code>Insert</code>用于插入一个Key</li>
+<li><code>Contains</code>用于检查指定的key是否存在。</li>
+<li>此外，<code>SkipList</code>在内部定义了<code>Iterator</code>类用于进行范围或者点查询。</li>
+</ul>
+<hr>
+<h3 id="Insert过程"><a href="#Insert过程" class="headerlink" title="Insert过程"></a>Insert过程</h3><p>SkipList在Insert时会首先找到该key对应的节点应该在的位置，由于LevelDB中的Skiplist每个节点是单向链接的，因此也就需要找到该key应该插入位置的前驱节点。这是通过<code>FindGreaterOrEqual</code>来实现的，该函数会返回在每一层上新插入节点的前驱节点:</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Node<span class="token operator">*</span> prev<span class="token punctuation">[</span>kMaxHeight<span class="token punctuation">]</span><span class="token punctuation">;</span>
+Node<span class="token operator">*</span> x <span class="token operator">=</span> <span class="token function">FindGreaterOrEqual</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> prev<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Our data structure does not allow duplicate insertion</span>
+<span class="token function">assert</span><span class="token punctuation">(</span>x <span class="token operator">==</span> <span class="token keyword">nullptr</span> <span class="token operator">||</span> <span class="token operator">!</span><span class="token function">Equal</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> x<span class="token operator">-></span>key<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>SkipList的算法要求为每个节点随机指定一个高度，如果该高度高于当前SkipList的最高高度，还需要用<code>head</code>节点来填充<code>prev</code>数组超出当前最大高度的部分：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> height <span class="token operator">=</span> <span class="token function">RandomHeight</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>height <span class="token operator">></span> <span class="token function">GetMaxHeight</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token function">GetMaxHeight</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> height<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    prev<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> head_<span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  max_height_<span class="token punctuation">.</span><span class="token function">store</span><span class="token punctuation">(</span>height<span class="token punctuation">,</span> std<span class="token double-colon punctuation">::</span>memory_order_relaxed<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>到这一步做完，新插入node的所有前驱节点都被正确找到了，只需要按照链表的方式将其链入即可：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">x <span class="token operator">=</span> <span class="token function">NewNode</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> height<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> height<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// NoBarrier_SetNext() suffices since we will add a barrier when</span>
+  <span class="token comment">// we publish a pointer to "x" in prev[i].</span>
+  x<span class="token operator">-></span><span class="token function">NoBarrier_SetNext</span><span class="token punctuation">(</span>i<span class="token punctuation">,</span> prev<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">NoBarrier_Next</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  prev<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">SetNext</span><span class="token punctuation">(</span>i<span class="token punctuation">,</span> x<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里链入的方式是从最底层到最高层链入，目的是为了防止并发情况下的错误。如果先将NewNode从高层链入，假设此时有一个并发的search操作到来，当该search操作到达这个node之后，它可能会顺着该node向下移动，但此时NewNode下层的next指针还没有设置完，从而导致错误。</p>
+<p>此处<code>x = NewNode(key, height)</code>分配了一个高度为<code>height</code>, 包含键为<code>key</code>的节点，这里仅仅只是简单将key赋值给Node内部，因为SkipList假设模板参数<code>Key</code>是可拷贝的。当我们在<code>MemTable</code>中对其实例化时，对应的<code>Key</code>为<code>const char*</code>, key的内容所占用的空间需要在调用<code>SkipList::insert</code>之前分配。</p>
+<h4 id="FindGreaterOrEqual"><a href="#FindGreaterOrEqual" class="headerlink" title="FindGreaterOrEqual"></a>FindGreaterOrEqual</h4><p>该函数是实现<code>SkipList</code>所有操作的核心，包括Insert中找到应该插入的<code>prev</code>位置，在<code>Contain</code>函数中找到目标key所在的位置等等。该函数的原型如下：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Key</span><span class="token punctuation">,</span> <span class="token keyword">class</span> <span class="token class-name">Comparator</span><span class="token operator">></span>
+<span class="token keyword">typename</span> <span class="token class-name">SkipList</span><span class="token operator">&lt;</span>Key<span class="token punctuation">,</span> Comparator<span class="token operator">></span><span class="token double-colon punctuation">::</span>Node<span class="token operator">*</span>
+<span class="token class-name">SkipList</span><span class="token operator">&lt;</span>Key<span class="token punctuation">,</span> Comparator<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">FindGreaterOrEqual</span><span class="token punctuation">(</span><span class="token keyword">const</span> Key<span class="token operator">&amp;</span> key<span class="token punctuation">,</span>
+                                              Node<span class="token operator">*</span><span class="token operator">*</span> prev<span class="token punctuation">)</span> <span class="token keyword">const</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>对于输入的key，该函数返回当前SkipList中满足<code>node key &gt;= key</code>的第一个节点，并且将每一层中，满足<code>node key &lt; key</code>的最大的节点放入prev数组中。该函数从最高层开始，不断试探下一个节点的key是否小于目标key，如果是，则向前移动；如果不是，则说明当前的节点满足：<code>node-&gt;key &lt; key &lt;= node-&gt;next-&gt;key</code>，因此将node加入到prev数组中。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Node<span class="token operator">*</span> x <span class="token operator">=</span> head_<span class="token punctuation">;</span>
+<span class="token keyword">int</span> level <span class="token operator">=</span> <span class="token function">GetMaxHeight</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  Node<span class="token operator">*</span> next <span class="token operator">=</span> x<span class="token operator">-></span><span class="token function">Next</span><span class="token punctuation">(</span>level<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">KeyIsAfterNode</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> next<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// Keep searching in this list</span>
+    x <span class="token operator">=</span> next<span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>prev <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> prev<span class="token punctuation">[</span>level<span class="token punctuation">]</span> <span class="token operator">=</span> x<span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>level <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">return</span> next<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+      <span class="token comment">// Switch to next list</span>
+      level<span class="token operator">--</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>除了<code>FindGreaterOrEqual</code>之外，<code>SkipList</code>还提供了<code>FindLessThan</code>, <code>FindLast</code>等函数，但它们的大体实现细节都与<code>FindGreaterThanOrEqual</code>无异，此处不再赘述。</p>
+<hr>
+<h3 id="SkipList搜索过程"><a href="#SkipList搜索过程" class="headerlink" title="SkipList搜索过程"></a>SkipList搜索过程</h3><p><code>SkipList</code>内部定义了<code>Iterator</code>类，但该类并不直接继承leveldb的<code>Iterator</code>类，因为<code>SkipList</code>作为一个utility, 并不属于db定义的一部分。也正是因为这个原因，<code>SkipList::Iterator</code>是定义在<code>SkipList</code>内部的，而且它不会支持一些<code>Iterator</code>抽象接口定义的操作，例如<code>value()</code>等。</p>
+<p>SkipList的Iterator包含了两个成员，一是该迭代器索引元素所在的跳表，二是其对应元素的节点：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Key</span><span class="token punctuation">,</span> <span class="token keyword">class</span> <span class="token class-name">Comparator</span><span class="token operator">></span>
+<span class="token keyword">class</span> <span class="token class-name">SkipList</span> <span class="token punctuation">&#123;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+  <span class="token keyword">class</span> <span class="token class-name">Iterator</span> <span class="token punctuation">&#123;</span>
+    SkipList<span class="token operator">*</span> list_<span class="token punctuation">;</span>
+    Node<span class="token operator">*</span> node_<span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>Iterator</code>通过调用<code>list_</code>的相关成员函数来修改保存的<code>node_</code>节点，从而实现指向不同元素的功能。以<code>Seek()</code>实现为例，该迭代器接口修改迭代器使其指向第一个比目标key大或相等的节点，其本质只是调用了<code>SkipList</code>的<code>FindGreaterOrEqual</code>函数：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Key</span><span class="token punctuation">,</span> <span class="token keyword">class</span> <span class="token class-name">Comparator</span><span class="token operator">></span>
+<span class="token keyword">inline</span> <span class="token keyword">void</span> SkipList<span class="token operator">&lt;</span>Key<span class="token punctuation">,</span> Comparator<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token class-name">Iterator</span><span class="token double-colon punctuation">::</span><span class="token function">Seek</span><span class="token punctuation">(</span><span class="token keyword">const</span> Key<span class="token operator">&amp;</span> target<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  node_ <span class="token operator">=</span> list_<span class="token operator">-></span><span class="token function">FindGreaterOrEqual</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>其他迭代器接口也是类似的实现。值得注意的是，由于这里<code>Iterator</code>是<code>SkipList</code>的嵌套类，因此它有权访问<code>SkipList</code>类的所有成员，包括私有成员。但是<code>SkipList</code>无权访问嵌套类<code>Iterator</code>的私有成员。</p>
+<hr>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本节我们简单介绍了<code>MemTable</code>以及<code>SkipList</code>的实现原理，<code>MemTable</code>作为一个内存缓冲区，其索引是可以替换的，只是在LevelDB中采用了SkipList，所以这两部分分开构建。<code>MemTable</code>负责接受外界<code>Insert, Delete, Get</code>请求并将其序列化为<code>SkipList</code>可接受的数据格式；<code>SkipList</code>负责有序索引的实现逻辑。</p>
+<p>一些有用的启发包括：使用迭代器实现<code>Get</code>操作，从而减少重复逻辑的书写。</p>
+
+                
+            </div>
+            <hr/>
+
+            
+
+    <div class="reprint" id="reprint-statement">
+        
+            <div class="reprint__author">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-user">
+                        文章作者:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="/about" rel="external nofollow noreferrer"></a>
+                </span>
+            </div>
+            <div class="reprint__type">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-link">
+                        文章链接:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="https://Holworth.github.io/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Memtable.html">https://Holworth.github.io/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Memtable.html</a>
+                </span>
+            </div>
+            <div class="reprint__notice">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-copyright">
+                        版权声明:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    本博客所有文章除特別声明外，均采用
+                    <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
+                    许可协议。转载请注明来源
+                    <a href="/about" target="_blank"></a>
+                    !
+                </span>
+            </div>
+        
+    </div>
+
+    <script async defer>
+      document.addEventListener("copy", function (e) {
+        let toastHTML = '<span>复制成功，请遵循本文的转载规则</span><button class="btn-flat toast-action" onclick="navToReprintStatement()" style="font-size: smaller">查看</a>';
+        M.toast({html: toastHTML})
+      });
+
+      function navToReprintStatement() {
+        $("html, body").animate({scrollTop: $("#reprint-statement").offset().top - 80}, 800);
+      }
+    </script>
+
+
+
+            <div class="tag_share" style="display: block;">
+                <div class="post-meta__tag-list" style="display: inline-block;">
+                    
+                        <div class="article-tag">
+                            
+                                <a href="/tags/LevelDB/">
+                                    <span class="chip bg-color">LevelDB</span>
+                                </a>
+                            
+                                <a href="/tags/C/">
+                                    <span class="chip bg-color">C++</span>
+                                </a>
+                            
+                                <a href="/tags/KV/">
+                                    <span class="chip bg-color">KV</span>
+                                </a>
+                            
+                        </div>
+                    
+                </div>
+                <div class="post_share" style="zoom: 80%; width: fit-content; display: inline-block; float: right; margin: -0.15rem 0;">
+                    <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+<div id="article-share">
+
+    
+    <div class="social-share" data-sites="twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin" data-wechat-qrcode-helper="<p>微信扫一扫即可分享！</p>"></div>
+    <script src="/libs/share/js/social-share.min.js"></script>
+    
+
+    
+
+</div>
+
+                </div>
+            </div>
+            
+                <style>
+    #reward {
+        margin: 40px 0;
+        text-align: center;
+    }
+
+    #reward .reward-link {
+        font-size: 1.4rem;
+        line-height: 38px;
+    }
+
+    #reward .btn-floating:hover {
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    #rewardModal {
+        width: 320px;
+        height: 350px;
+    }
+
+    #rewardModal .reward-title {
+        margin: 15px auto;
+        padding-bottom: 5px;
+    }
+
+    #rewardModal .modal-content {
+        padding: 10px;
+    }
+
+    #rewardModal .close {
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        color: rgba(0, 0, 0, 0.5);
+        font-size: 1.3rem;
+        line-height: 20px;
+        cursor: pointer;
+    }
+
+    #rewardModal .close:hover {
+        color: #ef5350;
+        transform: scale(1.3);
+        -moz-transform:scale(1.3);
+        -webkit-transform:scale(1.3);
+        -o-transform:scale(1.3);
+    }
+
+    #rewardModal .reward-tabs {
+        margin: 0 auto;
+        width: 210px;
+    }
+
+    .reward-tabs .tabs {
+        height: 38px;
+        margin: 10px auto;
+        padding-left: 0;
+    }
+
+    .reward-content ul {
+        padding-left: 0 !important;
+    }
+
+    .reward-tabs .tabs .tab {
+        height: 38px;
+        line-height: 38px;
+    }
+
+    .reward-tabs .tab a {
+        color: #fff;
+        background-color: #ccc;
+    }
+
+    .reward-tabs .tab a:hover {
+        background-color: #ccc;
+        color: #fff;
+    }
+
+    .reward-tabs .wechat-tab .active {
+        color: #fff !important;
+        background-color: #22AB38 !important;
+    }
+
+    .reward-tabs .alipay-tab .active {
+        color: #fff !important;
+        background-color: #019FE8 !important;
+    }
+
+    .reward-tabs .reward-img {
+        width: 210px;
+        height: 210px;
+    }
+</style>
+
+<div id="reward">
+    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close modal-close"><i class="fas fa-times"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs row">
+                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
+                    </ul>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('.tabs').tabs();
+    });
+</script>
+
+            
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">
+                <i class="far fa-dot-circle"></i>&nbsp;本篇
+            </div>
+            <div class="card">
+                <a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Memtable.html">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/18.jpg" class="responsive-img" alt="LevelDB阅读笔记-Memtable">
+                        
+                        <span class="card-title">LevelDB阅读笔记-Memtable</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-03-09
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/Coding/" class="post-category">
+                                    Coding
+                                </a>
+                            
+                            <a href="/categories/Coding/Database/" class="post-category">
+                                    Database
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/LevelDB/">
+                        <span class="chip bg-color">LevelDB</span>
+                    </a>
+                    
+                    <a href="/tags/C/">
+                        <span class="chip bg-color">C++</span>
+                    </a>
+                    
+                    <a href="/tags/KV/">
+                        <span class="chip bg-color">KV</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
+            <div class="card">
+                <a href="/post/MIT6-824-Lab3A%E7%AC%94%E8%AE%B0.html">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/17.jpg" class="responsive-img" alt="MIT6.824 Lab3A笔记">
+                        
+                        <span class="card-title">MIT6.824 Lab3A笔记</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-03-04
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-user fa-fw"></i>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/Distributed-System/">
+                        <span class="chip bg-color">Distributed System</span>
+                    </a>
+                    
+                    <a href="/tags/MIT6-824/">
+                        <span class="chip bg-color">MIT6.824</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+
+</div>
+
+
+
+<!-- 代码块功能依赖 -->
+<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
+
+<!-- 代码语言 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
+
+
+<!-- 代码块复制 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
+
+
+<!-- 代码块收缩 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
+
+
+    </div>
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
+        <div class="toc-widget card" style="background-color: white;">
+            <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
+            <div id="toc-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOC 悬浮按钮. -->
+
+<div id="floating-toc-btn" class="hide-on-med-and-down">
+    <a class="btn-floating btn-large bg-color">
+        <i class="fas fa-list-ul"></i>
+    </a>
+</div>
+
+
+<script src="/libs/tocbot/tocbot.min.js"></script>
+<script>
+    $(function () {
+        tocbot.init({
+            tocSelector: '#toc-content',
+            contentSelector: '#articleContent',
+            headingsOffset: -($(window).height() * 0.4 - 45),
+            collapseDepth: Number('0'),
+            headingSelector: 'h2, h3, h4'
+        });
+
+        // modify the toc link href to support Chinese.
+        let i = 0;
+        let tocHeading = 'toc-heading-';
+        $('#toc-content a').each(function () {
+            $(this).attr('href', '#' + tocHeading + (++i));
+        });
+
+        // modify the heading title id to support Chinese.
+        i = 0;
+        $('#articleContent').children('h2, h3, h4').each(function () {
+            $(this).attr('id', tocHeading + (++i));
+        });
+
+        // Set scroll toc fixed.
+        let tocHeight = parseInt($(window).height() * 0.4 - 64);
+        let $tocWidget = $('.toc-widget');
+        $(window).scroll(function () {
+            let scroll = $(window).scrollTop();
+            /* add post toc fixed. */
+            if (scroll > tocHeight) {
+                $tocWidget.addClass('toc-fixed');
+            } else {
+                $tocWidget.removeClass('toc-fixed');
+            }
+        });
+
+        
+        /* 修复文章卡片 div 的宽度. */
+        let fixPostCardWidth = function (srcId, targetId) {
+            let srcDiv = $('#' + srcId);
+            if (srcDiv.length === 0) {
+                return;
+            }
+
+            let w = srcDiv.width();
+            if (w >= 450) {
+                w = w + 21;
+            } else if (w >= 350 && w < 450) {
+                w = w + 18;
+            } else if (w >= 300 && w < 350) {
+                w = w + 16;
+            } else {
+                w = w + 14;
+            }
+            $('#' + targetId).width(w);
+        };
+
+        // 切换TOC目录展开收缩的相关操作.
+        const expandedClass = 'expanded';
+        let $tocAside = $('#toc-aside');
+        let $mainContent = $('#main-content');
+        $('#floating-toc-btn .btn-floating').click(function () {
+            if ($tocAside.hasClass(expandedClass)) {
+                $tocAside.removeClass(expandedClass).hide();
+                $mainContent.removeClass('l9');
+            } else {
+                $tocAside.addClass(expandedClass).show();
+                $mainContent.addClass('l9');
+            }
+            fixPostCardWidth('artDetail', 'prenext-posts');
+        });
+        
+    });
+</script>
+
+    
+
+</main>
+
+
+
+
+    <footer class="page-footer bg-color">
+    
+        <link rel="stylesheet" href="/libs/aplayer/APlayer.min.css">
+<style>
+    .aplayer .aplayer-lrc p {
+        
+        display: none;
+        
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 16px !important;
+    }
+
+    .aplayer .aplayer-lrc p.aplayer-lrc-current {
+        
+        display: none;
+        
+        font-size: 15px;
+        color: #42b983;
+    }
+
+    
+    .aplayer.aplayer-fixed.aplayer-narrow .aplayer-body {
+        left: -66px !important;
+    }
+
+    .aplayer.aplayer-fixed.aplayer-narrow .aplayer-body:hover {
+        left: 0px !important;
+    }
+
+    
+</style>
+<div class="">
+    
+    <div class="row">
+        <meting-js class="col l8 offset-l2 m10 offset-m1 s12"
+                   server="netease"
+                   type="playlist"
+                   id="503838841"
+                   fixed='true'
+                   autoplay='false'
+                   theme='#42b983'
+                   loop='all'
+                   order='random'
+                   preload='auto'
+                   volume='0.7'
+                   list-folded='true'
+        >
+        </meting-js>
+    </div>
+</div>
+
+<script src="/libs/aplayer/APlayer.min.js"></script>
+<script src="/libs/aplayer/Meting.min.js"></script>
+
+    
+
+    <div class="container row center-align"
+         style="margin-bottom: 0px !important;">
+        <div class="col s12 m8 l8 copy-right">
+            Copyright&nbsp;&copy;
+            
+                <span id="year">2019-2022</span>
+            
+            <a href="/about" target="_blank"></a>
+            |&nbsp;Powered by&nbsp;<a href="https://hexo.io/" target="_blank">Hexo</a>
+            |&nbsp;Theme&nbsp;<a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank">Matery</a>
+            <br>
+            
+            
+            
+                
+            
+            
+                <span id="busuanzi_container_site_pv">
+                &nbsp;|&nbsp;<i class="far fa-eye"></i>&nbsp;总访问量:&nbsp;
+                    <span id="busuanzi_value_site_pv" class="white-color"></span>
+            </span>
+            
+            
+                <span id="busuanzi_container_site_uv">
+                &nbsp;|&nbsp;<i class="fas fa-users"></i>&nbsp;总访问人数:&nbsp;
+                    <span id="busuanzi_value_site_uv" class="white-color"></span>
+            </span>
+            
+            <br>
+
+            <!-- 运行天数提醒. -->
+            
+            <br>
+            
+        </div>
+        <div class="col s12 m4 l4 social-link social-statis">
+    <a href="https://github.com/blinkfox" class="tooltipped" target="_blank" data-tooltip="访问我的GitHub" data-position="top" data-delay="50">
+        <i class="fab fa-github"></i>
+    </a>
+
+
+
+    <a href="mailto:1181062873@qq.com" class="tooltipped" target="_blank" data-tooltip="邮件联系我" data-position="top" data-delay="50">
+        <i class="fas fa-envelope-open"></i>
+    </a>
+
+
+
+
+
+
+
+    <a href="tencent://AddContact/?fromId=50&fromSubId=1&subcmd=all&uin=1181062873" class="tooltipped" target="_blank" data-tooltip="QQ联系我: 1181062873" data-position="top" data-delay="50">
+        <i class="fab fa-qq"></i>
+    </a>
+
+
+
+
+
+
+
+    <a href="/atom.xml" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50">
+        <i class="fas fa-rss"></i>
+    </a>
+
+</div>
+    </div>
+</footer>
+
+<div class="progress-bar"></div>
+
+
+    <!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    var searchFunc = function (path, search_id, content_id) {
+        'use strict';
+        $.ajax({
+            url: path,
+            dataType: "xml",
+            success: function (xmlResponse) {
+                // get the contents from search data
+                var datas = $("entry", xmlResponse).map(function () {
+                    return {
+                        title: $("title", this).text(),
+                        content: $("content", this).text(),
+                        url: $("url", this).text()
+                    };
+                }).get();
+                var $input = document.getElementById(search_id);
+                var $resultContent = document.getElementById(content_id);
+                $input.addEventListener('input', function () {
+                    var str = '<ul class=\"search-result-list\">';
+                    var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                    $resultContent.innerHTML = "";
+                    if (this.value.trim().length <= 0) {
+                        return;
+                    }
+                    // perform local searching
+                    datas.forEach(function (data) {
+                        var isMatch = true;
+                        var data_title = data.title.trim().toLowerCase();
+                        var data_content = data.content.trim().replace(/<[^>]+>/g, "").toLowerCase();
+                        var data_url = data.url;
+                        data_url = data_url.indexOf('/') === 0 ? data.url : '/' + data_url;
+                        var index_title = -1;
+                        var index_content = -1;
+                        var first_occur = -1;
+                        // only match artiles with not empty titles and contents
+                        if (data_title !== '' && data_content !== '') {
+                            keywords.forEach(function (keyword, i) {
+                                index_title = data_title.indexOf(keyword);
+                                index_content = data_content.indexOf(keyword);
+                                if (index_title < 0 && index_content < 0) {
+                                    isMatch = false;
+                                } else {
+                                    if (index_content < 0) {
+                                        index_content = 0;
+                                    }
+                                    if (i === 0) {
+                                        first_occur = index_content;
+                                    }
+                                }
+                            });
+                        }
+                        // show search results
+                        if (isMatch) {
+                            str += "<li><a href='" + data_url + "' class='search-result-title'>" + data_title + "</a>";
+                            var content = data.content.trim().replace(/<[^>]+>/g, "");
+                            if (first_occur >= 0) {
+                                // cut out 100 characters
+                                var start = first_occur - 20;
+                                var end = first_occur + 80;
+                                if (start < 0) {
+                                    start = 0;
+                                }
+                                if (start === 0) {
+                                    end = 100;
+                                }
+                                if (end > content.length) {
+                                    end = content.length;
+                                }
+                                var match_content = content.substr(start, end);
+                                // highlight all keywords
+                                keywords.forEach(function (keyword) {
+                                    var regS = new RegExp(keyword, "gi");
+                                    match_content = match_content.replace(regS, "<em class=\"search-keyword\">" + keyword + "</em>");
+                                });
+
+                                str += "<p class=\"search-result\">" + match_content + "...</p>"
+                            }
+                            str += "</li>";
+                        }
+                    });
+                    str += "</ul>";
+                    $resultContent.innerHTML = str;
+                });
+            }
+        });
+    };
+
+    searchFunc('/search.xml', 'searchInput', 'searchResult');
+});
+</script>
+
+    <!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+</div>
+
+
+    <script src="/libs/materialize/materialize.min.js"></script>
+    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
+    <script src="/libs/aos/aos.js"></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    <script src="/js/matery.js"></script>
+
+    
+
+    
+
+    <!-- 雪花特效 -->
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
+    <!-- Baidu Analytics -->
+
+    <!-- Baidu Push -->
+
+<script>
+    (function () {
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        } else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+
+    
+    <script src="/libs/others/clicklove.js" async="async"></script>
+    
+    
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+    
+
+    
+
+    
+
+    <!--腾讯兔小巢-->
+    
+    
+
+    
+
+    
+
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
+    
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<!--<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+</body>
+
+</html>
