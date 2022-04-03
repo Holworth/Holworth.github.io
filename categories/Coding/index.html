@@ -376,20 +376,20 @@
                 </a>
                 
                 
-                <a href="/categories/Coding/" title="Coding: 4">
+                <a href="/categories/Coding/" title="Coding: 5">
                     <span class="chip center-align waves-effect waves-light
                              chip-active "
                             style="background-color: #F5EEF8;">Coding
-                        <span class="tag-length">4</span>
+                        <span class="tag-length">5</span>
                     </span>
                 </a>
                 
                 
-                <a href="/categories/Coding/Database/" title="Database: 4">
+                <a href="/categories/Coding/Database/" title="Database: 5">
                     <span class="chip center-align waves-effect waves-light
                              chip-default "
                             style="background-color: #D5F5E3;">Database
-                        <span class="tag-length">4</span>
+                        <span class="tag-length">5</span>
                     </span>
                 </a>
                 
@@ -404,6 +404,64 @@
 
     <article id="articles" class="container articles">
         <div class="row tags-posts">
+            
+            <div class="article tag-post col s12 m6 l4" data-aos="zoom-in">
+                <div class="card">
+                    <a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Env.html">
+                        <div class="card-image tag-image">
+                            
+                            
+                            <img src="/medias/featureimages/20.jpg" class="responsive-img" alt="LevelDB阅读笔记-Env">
+                            
+                            <span class="card-title">LevelDB阅读笔记-Env</span>
+                        </div>
+                    </a>
+                    <div class="card-content article-content">
+                        <div class="summary block-with-text">
+                            
+                                LevelDB与操作系统交互接口：EnvLevelDB中的Env类是一个上层逻辑与操作系统进行交互的接口，由于LevelDB以文件方式对数据进行持久化，并且需要读取文件来完成一次Get操作，上述过程都涉及到对文件的操作。但不同操作系统的文件
+                            
+                        </div>
+                        <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-04-02
+                            </span>
+                            <span class="publish-author">
+                                
+                                <i class="fas fa-bookmark fa-fw icon-category"></i>
+                                
+                                <a href="/categories/Coding/" class="post-category">
+                                    Coding
+                                </a>
+                                
+                                <a href="/categories/Coding/Database/" class="post-category">
+                                    Database
+                                </a>
+                                
+                                
+                            </span>
+                        </div>
+                    </div>
+
+                    
+                    <div class="card-action article-tags">
+                        
+                        <a href="/tags/LevelDB/">
+                            <span class="chip bg-color">LevelDB</span>
+                        </a>
+                        
+                        <a href="/tags/C/">
+                            <span class="chip bg-color">C++</span>
+                        </a>
+                        
+                        <a href="/tags/KV/">
+                            <span class="chip bg-color">KV</span>
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+            </div>
             
             <div class="article tag-post col s12 m6 l4" data-aos="zoom-in">
                 <div class="card">
@@ -954,23 +1012,6 @@ $(function () {
     
     <script src="/libs/instantpage/instantpage.js" type="module"></script>
     
-
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        tex2jax: {
-            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
-            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
-            processEscapes: true
-        }
-    });
-    MathJax.Hub.Queue(function() {
-        var all = MathJax.Hub.getAllJax();
-        for (var i = 0; i < all.length; ++i)
-            all[i].SourceElement().parentNode.className += ' has-jax';
-    });
-</script>
-<!--<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
 
 </body>
 
