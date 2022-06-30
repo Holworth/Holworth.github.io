@@ -1,0 +1,329 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>最短路径算法基础 | Hexo</title><meta name="keywords" content="Algorithm,Acwing"><meta name="author"><meta name="copyright"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="最短路径算法基础本文介绍四种最短路径算法以及其对应的模板。最短路径算法是十分基础的算法，一方面，一些题目直接需要我们求图中两点的最短路径；另一方面，一些题目也可以通过先建模成图，然后再调用最短路径算法解决。 本文要介绍的最短路径算法包括以下几种：     算法 限制 复杂度     Dijkstra算法 图中无负权边,单源 $O(n^2)$   Bellman-Ford算法 无限制，单源 $O(m">
+<meta property="og:type" content="article">
+<meta property="og:title" content="最短路径算法基础">
+<meta property="og:url" content="https://holworth.github.io/post/%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="最短路径算法基础本文介绍四种最短路径算法以及其对应的模板。最短路径算法是十分基础的算法，一方面，一些题目直接需要我们求图中两点的最短路径；另一方面，一些题目也可以通过先建模成图，然后再调用最短路径算法解决。 本文要介绍的最短路径算法包括以下几种：     算法 限制 复杂度     Dijkstra算法 图中无负权边,单源 $O(n^2)$   Bellman-Ford算法 无限制，单源 $O(m">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2022-04-23T02:59:11.000Z">
+<meta property="article:modified_time" content="2022-04-29T03:13:08.721Z">
+<meta property="article:tag" content="Algorithm">
+<meta property="article:tag" content="Acwing">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://holworth.github.io/post/%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"prismjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '最短路径算法基础',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-04-29 11:13:08'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 6.0.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">9</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><hr/></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Hexo</a></span><div id="menus"><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">最短路径算法基础</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-04-23T02:59:11.000Z" title="发表于 2022-04-23 10:59:11">2022-04-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-04-29T03:13:08.721Z" title="更新于 2022-04-29 11:13:08">2022-04-29</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="最短路径算法基础"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="最短路径算法基础"><a href="#最短路径算法基础" class="headerlink" title="最短路径算法基础"></a>最短路径算法基础</h1><p>本文介绍四种最短路径算法以及其对应的模板。最短路径算法是十分基础的算法，一方面，一些题目直接需要我们求图中两点的最短路径；另一方面，一些题目也可以通过先建模成图，然后再调用最短路径算法解决。</p>
+<p>本文要介绍的最短路径算法包括以下几种：</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>算法</th>
+<th>限制</th>
+<th>复杂度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dijkstra算法</td>
+<td>图中无负权边,单源</td>
+<td>$O(n^2)$</td>
+</tr>
+<tr>
+<td>Bellman-Ford算法</td>
+<td>无限制，单源</td>
+<td>$O(mn)$</td>
+</tr>
+<tr>
+<td>SPFA算法</td>
+<td>无限制，单源</td>
+<td>一般$O(m)$ 最坏$O(mn)$</td>
+</tr>
+<tr>
+<td>Floyd算法</td>
+<td>多源</td>
+<td>$O(n^3)$</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="Dijkstra算法"><a href="#Dijkstra算法" class="headerlink" title="Dijkstra算法"></a>Dijkstra算法</h2><p>Dijkstra算法采用了一种贪心的算法，它维护一个当前已经求的最短路的集合，然后不断向其中添加点，直到所有点都被添加进去。而每次添加点的方式就是选择当前距离源点最近的点（贪心），而当一个点被加入了之后，就用这个点来更新其他与该点相连的点到源点的距离。</p>
+<p>在代码实现上如下所示，我们使用二维矩阵<code>g[N][N]</code>来代表一个图，<code>g[i][j]</code>表示有向图中点<code>i</code>到点<code>j</code>的距离, 一共有n个点。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token function">dijkstra</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  std<span class="token double-colon punctuation">::</span><span class="token function">memset</span><span class="token punctuation">(</span>dist<span class="token punctuation">,</span> <span class="token number">0x3f</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>dist<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// Assume the source point is 1</span>
+  dist<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token comment">// Loop until all 'n' nodes have been visited</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> run <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> run <span class="token operator">&lt;=</span> n<span class="token punctuation">;</span> <span class="token operator">++</span>run<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// Find an unvisited node that has minimal distance</span>
+    <span class="token keyword">int</span> min_node<span class="token punctuation">,</span> min_dist <span class="token operator">=</span> <span class="token number">1e9</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> i <span class="token operator">&lt;=</span> n<span class="token punctuation">;</span> <span class="token operator">++</span>i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">&lt;</span> min_dist <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span>visit<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        min_dist <span class="token operator">=</span> dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+        min_node <span class="token operator">=</span> i<span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+
+    visit<span class="token punctuation">[</span>min_node<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+    <span class="token comment">// Use newly-added node to update other distance</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> i <span class="token operator">&lt;=</span> n<span class="token punctuation">;</span> <span class="token operator">++</span>i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>visit<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">&amp;&amp;</span> dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">></span> dist<span class="token punctuation">[</span>min_node<span class="token punctuation">]</span> <span class="token operator">+</span> g<span class="token punctuation">[</span>min_node<span class="token punctuation">]</span><span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> dist<span class="token punctuation">[</span>min_node<span class="token punctuation">]</span> <span class="token operator">+</span> g<span class="token punctuation">[</span>min_node<span class="token punctuation">]</span><span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>因为上述过程需要执行n轮，而且每轮都需要查找最短距离的点，并且用该点来更新另外n个点的距离，因此复杂度为$O(n^2)$.</p>
+<p>上述算法被称为朴素的Dijkstra算法，一个优化版本是在搜索当前最短路径点的时候使用堆进行优化，这样查找最短路径点的复杂度从$O(n)$降低为$O(\log n)$. 这部分代码如下：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token function">dijkstra</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  std<span class="token double-colon punctuation">::</span>priority_queue<span class="token operator">&lt;</span>Point<span class="token punctuation">,</span> std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>Point<span class="token operator">>></span> q<span class="token punctuation">;</span>
+  dist<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  q<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token operator">!</span>q<span class="token punctuation">.</span><span class="token function">empty</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    curr <span class="token operator">=</span> q<span class="token punctuation">.</span><span class="token function">top</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    q<span class="token punctuation">.</span><span class="token function">pop</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>visit<span class="token punctuation">[</span>curr<span class="token punctuation">.</span>x<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">continue</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    
+    visit<span class="token punctuation">[</span>curr<span class="token punctuation">.</span>x<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+    dist<span class="token punctuation">[</span>curr<span class="token punctuation">.</span>x<span class="token punctuation">]</span> <span class="token operator">=</span> curr<span class="token punctuation">.</span>dist<span class="token punctuation">;</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>curr<span class="token punctuation">.</span>x <span class="token operator">==</span> n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">return</span> dist<span class="token punctuation">[</span>curr<span class="token punctuation">.</span>x<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">auto</span><span class="token operator">&amp;</span> edge <span class="token operator">:</span> g<span class="token punctuation">[</span>curr<span class="token punctuation">.</span>x<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>visit<span class="token punctuation">[</span>edge<span class="token punctuation">.</span>x<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        dist<span class="token punctuation">[</span>edge<span class="token punctuation">.</span>x<span class="token punctuation">]</span> <span class="token operator">=</span> std<span class="token double-colon punctuation">::</span><span class="token function">min</span><span class="token punctuation">(</span>dist<span class="token punctuation">[</span>edge<span class="token punctuation">.</span>x<span class="token punctuation">]</span><span class="token punctuation">,</span> dist<span class="token punctuation">[</span>curr<span class="token punctuation">.</span>x<span class="token punctuation">]</span> <span class="token operator">+</span> edge<span class="token punctuation">.</span>dist<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        q<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span><span class="token punctuation">&#123;</span>edge<span class="token punctuation">.</span>x<span class="token punctuation">,</span> dist<span class="token punctuation">[</span>edge<span class="token punctuation">.</span>x<span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>我们使用一个堆来存储所有点到源点的距离，但是值得注意的是该堆中可能存在多个目的点相同的点对，这是因为一个点可能多次被前面加入集合的点所更新过。但堆的性质保证了即使有多个点在堆中时，其<code>top()</code>调用也只会获得具有最小路径的那条记录。我们需要在第8行检查该点之前是否已经加入过最短路集合了。</p>
+<hr>
+<h2 id="Bellman-Ford算法"><a href="#Bellman-Ford算法" class="headerlink" title="Bellman-Ford算法"></a>Bellman-Ford算法</h2><p>Dijkstra算法的一个限制时不能有负权，下面的一个例子说明了在有负权时Dijkstra算法会得到错误的结果：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">/*
+ *      4 
+ *  a--------->b
+ *   \       / 
+ *    \ 5   / -3
+ *     \   / 
+ *      \ /
+ *       c
+ *  其中a指向c，c指向b，且c到b这条边是负权边。
+ *  根据dijkstra算法，我们会先得到dist[b] = 4, 并且将visit[b]设置
+ *  为true，但实际上从上图来看，dist[b] = 5 + (-3) = 2才对。
+ */</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>原因在于Dijkstra算法一旦将一个点加入了最短路集合中就不会在后续继续更新该点的距离了，在所有边都是正权时，这样做并没有问题。但负权可能会在节点扩展到一定程度时导致原先的距离被进一步缩小。</p>
+<p>为了解决这个问题，一个自然的想法是一直追踪点到源点的距离，追踪的方式就是利用其他点来更新该点到源点的最短距离。例如在上个例子中，持续追踪b和a之间的距离，可以使用c的距离5加上c到b的距离-3，得到更小的距离2。</p>
+<p>根据上述原则我们可以写出以下的动态规划方程：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">min</span><span class="token punctuation">(</span>dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">,</span> dist<span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">+</span> edge<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span> <span class="token operator">&lt;=</span> j <span class="token operator">&lt;=</span> n<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>但是上述递推方程的问题在于，要更新<code>dist[i]</code>, 必须要有<code>dist[j]</code>的信息，而要更新<code>dist[j]</code>也必须要有<code>dist[i]</code>的信息，这样就形成了互相依赖的关系，双方谁也无法计算出需要的值。</p>
+<p>而Bellman-Ford算法巧妙地打破了这一依赖关系，他将问题转述如下：从源点到目的点，最多不超过k条边的最短路。通过这种方式，Bellman-Ford算法引入了第三个纬度，打破了依赖关系。在这种描述方式下，<code>dist[i]</code>只会依赖于上一轮的所有<code>dist</code>结果，因为从源点到目的点<code>dst</code>的不超过k条边的路径可以分为两类：</p>
+<ul>
+<li>从源点到某个点<code>tmp</code>, 再从<code>tmp</code>到目的点<code>dst</code>,由于整个路径不超过k条边，因此前一部分不能超过<code>k-1</code>条边；</li>
+<li>从源点直接到<code>dst</code>的不超过<code>k-1</code>条边的路径。</li>
+</ul>
+<p>因此我们可以写出如下的动态规划方程：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>k<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">min</span><span class="token punctuation">(</span>dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>k <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> dist<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">[</span>k <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">+</span> edge<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span> <span class="token operator">&lt;=</span> j <span class="token operator">&lt;=</span> n<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>代码如下所示：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token function">bellman_ford</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  std<span class="token double-colon punctuation">::</span><span class="token function">memset</span><span class="token punctuation">(</span>dist<span class="token punctuation">,</span> <span class="token number">0x7f</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>dist<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// move from 1 to 1 is of distance 0</span>
+  dist<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> turn <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> turn <span class="token operator">&lt;=</span> k<span class="token punctuation">;</span> <span class="token operator">++</span>turn<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> prev <span class="token operator">=</span> <span class="token punctuation">(</span>turn <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">%</span> <span class="token number">2</span><span class="token punctuation">;</span>
+    <span class="token comment">// For each node, update the distance from the last run related </span>
+    <span class="token comment">// node value. The update value in run turn only relies on value </span>
+    <span class="token comment">// in the last run</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> j <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> j <span class="token operator">&lt;=</span> n<span class="token punctuation">;</span> <span class="token operator">++</span>j<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">int</span> val <span class="token operator">=</span> dist<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">[</span>prev<span class="token punctuation">]</span><span class="token punctuation">;</span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">auto</span> <span class="token operator">&amp;</span>edge <span class="token operator">:</span> g<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">int</span> src <span class="token operator">=</span> edge<span class="token punctuation">.</span>from<span class="token punctuation">,</span> w <span class="token operator">=</span> edge<span class="token punctuation">.</span>weight<span class="token punctuation">;</span>
+        val <span class="token operator">=</span> std<span class="token double-colon punctuation">::</span><span class="token function">min</span><span class="token punctuation">(</span>dist<span class="token punctuation">[</span>src<span class="token punctuation">]</span><span class="token punctuation">[</span>prev<span class="token punctuation">]</span> <span class="token operator">+</span> w<span class="token punctuation">,</span> val<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+      dist<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">[</span>turn <span class="token operator">%</span> <span class="token number">2</span><span class="token punctuation">]</span> <span class="token operator">=</span> val<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>由于第k轮的更新值只会依赖于第k-1轮的值，因此我们只需要一个二维数据<code>dist[n][2]</code>来保存<code>dist[n][k]</code>和<code>dist[n][k - 1]</code>即可。在更新时，对每个点，都按照上面的动态规划方程执行，这里我们存储边的方式是邻接表。<code>g[j]</code>代表了所有到达<code>j</code>的点；第12行的循环就是遍历了所有到达j的边，并用其源点上一轮的最短路径来更新当轮的最短路径。</p>
+<p>使用Bellman-Ford算法可以用来判断图中是否有负环，一般而言从源点到目的点的最短路至多只会经历n-1条边，如果超过n条边，那么这条路径上有超过n+1个点，根据抽屉原理，必有两个点相同，那么如果我们将这两个相同点之间的路径拿掉，这条路径的长度会增加，否则与最短路的定义矛盾，因此这两个相同点之间的路径形成了一个负环。</p>
+<p>Bellman-Ford算法的复杂度在上述代码中为$O(km)$, 因为我们执行了k轮，每轮都查看了所有点的入边，入边的大小正好等于$O(m)$.通常而言，我们会将$k$设为$n-1$, 这样Bellman-Ford算法的复杂度为$O(nm)$.</p>
+<hr>
+<h2 id="SPFA算法"><a href="#SPFA算法" class="headerlink" title="SPFA算法"></a>SPFA算法</h2><p>Bellman-Ford算法通过引入第三个纬度解决了相互依赖问题，但是其复杂度较高，高达$O(nm)$, 对于一个稠密图，$m=O(n^2)$, 运行Bellman-Ford算法会导致$O(n^3)$的开销，因此Bellman-Ford算法的效率实际上较低。而造成Bellman-Ford算法效率低下的原因在于每一轮算法执行时都需要去遍历所有的边来更新最短路径。实际上，我们观察递推方程：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>k<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">min</span><span class="token punctuation">(</span>dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>k <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> dist<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">[</span>k <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">+</span> edge<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span> <span class="token operator">&lt;=</span> j <span class="token operator">&lt;=</span> n<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>我们可以发现，<code>dist[i][k]</code>的更新仅仅依赖于上一轮中的<code>dist[j][k - 1]</code>， 这里的j也只有那些与i相连的节点而已，因此，如果一个节点<code>i</code>的所有前驱<code>j</code>都没有更新，那么该节点<code>i</code>也不会被更新。SPFA算法正是基于这个观察，当一个节点<code>i</code>的最短路被更新时，它将自己push到一个队列中，用自己的最短路径来更新其后继节点的最短路径。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token function">spfa</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token function">memset</span><span class="token punctuation">(</span>dist<span class="token punctuation">,</span> <span class="token number">0x7f</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>dist<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  dist<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  in_q<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+  std<span class="token double-colon punctuation">::</span>queue<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span> q<span class="token punctuation">;</span>
+  q<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// Loop unitl q is not empty</span>
+  <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token operator">!</span>q<span class="token punctuation">.</span><span class="token function">empty</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> curr <span class="token operator">=</span> q<span class="token punctuation">.</span><span class="token function">front</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    q<span class="token punctuation">.</span><span class="token function">pop</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    in_q<span class="token punctuation">[</span>curr<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">auto</span><span class="token operator">&amp;</span> edge <span class="token operator">:</span> g<span class="token punctuation">[</span>curr<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">int64_t</span> new_dist <span class="token operator">=</span> dist<span class="token punctuation">[</span>curr<span class="token punctuation">]</span> <span class="token operator">+</span> edge<span class="token punctuation">.</span>weight<span class="token punctuation">;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>new_dist <span class="token operator">&lt;</span> dist<span class="token punctuation">[</span>edge<span class="token punctuation">.</span>to<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        dist<span class="token punctuation">[</span>edge<span class="token punctuation">.</span>to<span class="token punctuation">]</span> <span class="token operator">=</span> new_dist<span class="token punctuation">;</span>
+        <span class="token comment">// Push the node only when it is not in the queue</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>in_q<span class="token punctuation">[</span>edge<span class="token punctuation">.</span>to<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+          q<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span>edge<span class="token punctuation">.</span>to<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          in_q<span class="token punctuation">[</span>edge<span class="token punctuation">.</span>to<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+      <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>SPFA算法在最坏情况下等同于<code>Bellman-Ford</code>算法，其复杂度为$O(mn)$, 但是在一般情况下其复杂度仅有$O(m)$.</p>
+<hr>
+<h2 id="Floyd算法"><a href="#Floyd算法" class="headerlink" title="Floyd算法"></a>Floyd算法</h2><p>不同于上面的三种单源最短路径算法，Floyd算法用于求一个图中任意两点之间的最短路径，Floyd算法实际上也是动态规划的一个直接应用。在Floyd算法中，我们需要维护一个状态：<code>dist[i][j][k]</code>, 即从<code>i</code>到<code>j</code>， 只经过<code>1..k</code>这些点的最短路径。</p>
+<p>根据以上的定义，我们发现从<code>i</code>到<code>j</code>且只经过<code>1..k</code>这些点的路径可以分为两类：经过k的和不经过k的，如果经过k，那么其路径中必定存在一个点k, 该路径可分为从i到k和从k到j.如果不经过k，那么该路径是一条从<code>i</code>到<code>j</code>的只经过<code>1..k-1</code>的路径。</p>
+<p>因此我们可以写出如下的递推方程：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">[</span>k<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">min</span><span class="token punctuation">(</span>dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>k<span class="token punctuation">]</span><span class="token punctuation">[</span>k<span class="token punctuation">]</span> <span class="token operator">+</span> dist<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">[</span>k<span class="token punctuation">]</span><span class="token punctuation">[</span>k<span class="token punctuation">]</span><span class="token punctuation">,</span> dist<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">[</span>k <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>代码实现如下：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token function">floyd</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> k <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> k <span class="token operator">&lt;=</span> n<span class="token punctuation">;</span> <span class="token operator">++</span>k<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> i <span class="token operator">&lt;=</span> n<span class="token punctuation">;</span> <span class="token operator">++</span>i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> j <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> j <span class="token operator">&lt;=</span> n<span class="token punctuation">;</span> <span class="token operator">++</span>j<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        g<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">=</span> std<span class="token double-colon punctuation">::</span><span class="token function">min</span><span class="token punctuation">(</span>g<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">,</span> g<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>k<span class="token punctuation">]</span> <span class="token operator">+</span> g<span class="token punctuation">[</span>k<span class="token punctuation">]</span><span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="https://Holworth.github.io"></a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://holworth.github.io/post/%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80.html">https://holworth.github.io/post/%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://Holworth.github.io" target="_blank">Hexo</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Algorithm/">Algorithm</a><a class="post-meta__tags" href="/tags/Acwing/">Acwing</a></div><div class="post_share"><div class="social-share" data-image="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Env.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">LevelDB阅读笔记-Env</div></div></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name"></div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">9</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80"><span class="toc-number">1.</span> <span class="toc-text">最短路径算法基础</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Dijkstra%E7%AE%97%E6%B3%95"><span class="toc-number">1.1.</span> <span class="toc-text">Dijkstra算法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Bellman-Ford%E7%AE%97%E6%B3%95"><span class="toc-number">1.2.</span> <span class="toc-text">Bellman-Ford算法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SPFA%E7%AE%97%E6%B3%95"><span class="toc-number">1.3.</span> <span class="toc-text">SPFA算法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Floyd%E7%AE%97%E6%B3%95"><span class="toc-number">1.4.</span> <span class="toc-text">Floyd算法</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/post/%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80.html" title="最短路径算法基础"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="最短路径算法基础"/></a><div class="content"><a class="title" href="/post/%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80.html" title="最短路径算法基础">最短路径算法基础</a><time datetime="2022-04-23T02:59:11.000Z" title="发表于 2022-04-23 10:59:11">2022-04-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Env.html" title="LevelDB阅读笔记-Env"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="LevelDB阅读笔记-Env"/></a><div class="content"><a class="title" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Env.html" title="LevelDB阅读笔记-Env">LevelDB阅读笔记-Env</a><time datetime="2022-04-02T10:46:21.000Z" title="发表于 2022-04-02 18:46:21">2022-04-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Memtable.html" title="LevelDB阅读笔记-Memtable"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="LevelDB阅读笔记-Memtable"/></a><div class="content"><a class="title" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Memtable.html" title="LevelDB阅读笔记-Memtable">LevelDB阅读笔记-Memtable</a><time datetime="2022-03-09T12:44:28.000Z" title="发表于 2022-03-09 20:44:28">2022-03-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/MIT6-824-Lab3A%E7%AC%94%E8%AE%B0.html" title="MIT6.824 Lab3A笔记"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="MIT6.824 Lab3A笔记"/></a><div class="content"><a class="title" href="/post/MIT6-824-Lab3A%E7%AC%94%E8%AE%B0.html" title="MIT6.824 Lab3A笔记">MIT6.824 Lab3A笔记</a><time datetime="2022-03-04T13:21:14.000Z" title="发表于 2022-03-04 21:21:14">2022-03-04</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-key%E7%9B%B8%E5%85%B3%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html" title="LevelDB阅读笔记:key相关数据结构"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="LevelDB阅读笔记:key相关数据结构"/></a><div class="content"><a class="title" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-key%E7%9B%B8%E5%85%B3%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html" title="LevelDB阅读笔记:key相关数据结构">LevelDB阅读笔记:key相关数据结构</a><time datetime="2022-02-24T13:37:08.000Z" title="发表于 2022-02-24 21:37:08">2022-02-24</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2022 By null</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.min.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
