@@ -1,0 +1,229 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>XRP: In-Kernel Storage Functions with eBPF阅读笔记 | Hexo</title><meta name="keywords" content="Linux Kernel,Filesystem,Paper Readings"><meta name="author"><meta name="copyright"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="XRP: In-Kernel Storage Functions with eBPF阅读笔记Introduction本文将介绍一篇OSDI2022年的论文： XRP: In-Kernel Storage Functions with eBPF,在这篇论文中，作者利用Linux Kernel提供的BPF(Berkeley Packet Filter)机制将用户态程序的部分逻辑移动到Device Dr">
+<meta property="og:type" content="article">
+<meta property="og:title" content="XRP: In-Kernel Storage Functions with eBPF阅读笔记">
+<meta property="og:url" content="https://holworth.github.io/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="XRP: In-Kernel Storage Functions with eBPF阅读笔记Introduction本文将介绍一篇OSDI2022年的论文： XRP: In-Kernel Storage Functions with eBPF,在这篇论文中，作者利用Linux Kernel提供的BPF(Berkeley Packet Filter)机制将用户态程序的部分逻辑移动到Device Dr">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg2.png">
+<meta property="article:published_time" content="2022-06-30T13:38:20.000Z">
+<meta property="article:modified_time" content="2022-07-01T07:13:21.908Z">
+<meta property="article:tag" content="Linux Kernel">
+<meta property="article:tag" content="Filesystem">
+<meta property="article:tag" content="Paper Readings">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg2.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://holworth.github.io/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"prismjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: true,
+    post: true
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'XRP: In-Kernel Storage Functions with eBPF阅读笔记',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-07-01 15:13:21'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 6.0.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">12</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">12</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Hexo</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">XRP: In-Kernel Storage Functions with eBPF阅读笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-06-30T13:38:20.000Z" title="发表于 2022-06-30 21:38:20">2022-06-30</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-07-01T07:13:21.908Z" title="更新于 2022-07-01 15:13:21">2022-07-01</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="XRP: In-Kernel Storage Functions with eBPF阅读笔记"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="post-content" id="article-container"><h1 id="XRP-In-Kernel-Storage-Functions-with-eBPF阅读笔记"><a href="#XRP-In-Kernel-Storage-Functions-with-eBPF阅读笔记" class="headerlink" title="XRP: In-Kernel Storage Functions with eBPF阅读笔记"></a>XRP: In-Kernel Storage Functions with eBPF阅读笔记</h1><h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><p>本文将介绍一篇OSDI2022年的论文： <em>XRP: In-Kernel Storage Functions with eBPF</em>,在这篇论文中，作者利用Linux Kernel提供的BPF(Berkeley Packet Filter)机制将用户态程序的部分逻辑移动到Device Driver层次，从而减轻了传统的Linux Storage软件栈的开销，提升了一些存储系统在Linux系统上的性能表现。</p>
+<hr>
+<h2 id="Background-amp-Motivation"><a href="#Background-amp-Motivation" class="headerlink" title="Background &amp; Motivation"></a>Background &amp; Motivation</h2><h3 id="Linux系统的存储软件栈"><a href="#Linux系统的存储软件栈" class="headerlink" title="Linux系统的存储软件栈"></a>Linux系统的存储软件栈</h3><p>Linux系统的存储软件栈自上而下包括了：用户态程序，文件系统层（又分为虚拟文件系统与硬件文件系统），块设备层(BIO Layer), 设备驱动层(Device Driver Layer)以及最后的存储设备层(Device Layer)。上述层次中，除了设备层之外的层次都由软件代码构成，为上层提供一定的抽象接口。例如文件系统向用户程序提供了文件这一抽象概念；块设备为文件系统提供了统一的硬件线性地址抽象；设备驱动层为块设备层提供了硬件的物理模型抽象。下图展示了一个简化的Linux存储软件栈</p>
+<p><img src="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0/LinuxStorageStack.png"></p>
+<p>因此我们可以看到，对于一个简单的<code>write</code>文件操作，数据需要经过多层内核层次，最终才能到达底层的存储设备。事实上，操作系统采用这样的层次设计是有一定的道理的，文件系统层次对用户提供了文件这一有效和直观的抽象；BIO层次提供了块设备的抽象，使得任何不同型号的底层存储设备都有统一的使用接口，提供了扩展性。尤其是在很多年之前，存储设备都是慢速的磁盘，BIO层次可以将一些分离的IO请求找机会拼接为顺序读写，从而提升性能。这些软件优化对于当时的慢速设备是比较有效的，所以Linux的存储软件栈也一直延续至今。</p>
+<hr>
+<h3 id="存储软件栈成为性能瓶颈"><a href="#存储软件栈成为性能瓶颈" class="headerlink" title="存储软件栈成为性能瓶颈"></a>存储软件栈成为性能瓶颈</h3><p>这是本文的研究动机之一，上面已经介绍过多层次的Linux存储软件栈。对于慢速设备而言，这些软件栈的开销比起存储设备的访问开销占比较小。但是对于高速的存储设备而言，软件栈开销占比会成为一个不可忽视的因素：</p>
+<p><img src="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0/512BReadBreakDown.png" width="80%"></p>
+<p>在本文所做的实验中512B的随机读操作中，结果显示软件栈的开销已经达到了整个操作的50%。</p>
+<p>为了解决这个问题，一些方法被提了出来：例如直接Bypass Kernel，应用程序绕过Linux Kernel直接读写底层设备，SPDK就提供了这样的工具。但是采用bypass kernel的方法会有以下问题：</p>
+<ul>
+<li>系统的安全性难以保证。如果所有应用都直接操作裸设备，那很难分得清谁使用哪部分，哪些部分该读写哪些部分不该读写。</li>
+<li>浪费CPU资源。这是因为用户态程序不能响应中断，只能通过轮训IO寄存器状态的方式来获知一个IO操作是否完成。轮训显然会造成CPU资源的浪费。</li>
+</ul>
+<p>所以本文提出了一种利用Kernel的机制来发起IO请求，但是尽量避免执行完整的IO软件栈。</p>
+<hr>
+<h3 id="BPF机制"><a href="#BPF机制" class="headerlink" title="BPF机制"></a>BPF机制</h3><p>BPF全称为Berkeley Packet Filter, 最早于1992年出现在Berkeley大学发表的论文<a href="www.tcpdump.org/papers/bpf-usenix93.pdf"><em>The BSD Packet Filter: A New Architecture for User-level Packet Capturetps</em></a>中。BPF机制最开始的目的是为了方便对网络数据的分析，当时的一些网络分析应用，如网络流量监控程序等都是运行在用户态，如果需要对内核的网络数据包进行分析则需要使用系统调用将内核的网络数据包拷贝到用户态。BPF的最初设计是在允许在内核态对数据包执行用户指定的操作，然后由用户指定的逻辑来决定是否接受这个包。</p>
+<p>从Linux 3.18版本开始，Linux系统支持了eBPF(Extended BPF), 不仅仅只局限于上面的对网络包进行计算的过程。eBPF允许用户植入自行定义的一些钩子函数，这些函数会在某些特定事件发生时会调用。而调用的过程全部发生在内核态，从而减少了内核态和用户态之间的数据拷贝。</p>
+<hr>
+<h3 id="利用BPF机制绕过部分IO软件栈"><a href="#利用BPF机制绕过部分IO软件栈" class="headerlink" title="利用BPF机制绕过部分IO软件栈"></a>利用BPF机制绕过部分IO软件栈</h3><p>类似于使用cBPF(Classic BPF, 在eBPF出现之后，最早的BPF机制被称为cBPF)来过滤无用的软件数据包。这篇论文考虑使用eBPF来过滤不需要的内核态到用户态的数据拷贝。论文提出了两个典型的使用场景来说明何为不必要的数据拷贝：</p>
+<ul>
+<li>B+Tree的搜索操作：对一个B+Tree索引进行搜索需要从根节点不断搜索每个中间节点，对每个中间节点的数据进行一定的解析找到下一层的中间节点。最后定位到叶节点。这个过程需要的系统调用次数正好为树的高度，但实际上在搜索的过程中一个节点的数据被解析之后就没用了，没有必要将其拷贝到用户态。拷贝到用户态仅仅只是因为我们需要用户态代码解析它。</li>
+<li>链表的遍历操作：和B+Tree的搜索一样，读取一个节点只是为了知道下一个节点在哪。</li>
+</ul>
+<p>很显然，上述操作的行为都是：中间操作-&gt; 最终结果的模式。中间操作需要在用户态完成，造成较大的数据拷贝开销。而BPF机制可以将部分逻辑代码交给内核执行，从而减少这之间的数据拷贝开销。</p>
+<p>一个问题是，在哪个层次利用eBPF植入用户态代码。Linux的IO软件栈包括了以下层次：</p>
+<p><img src="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0/LinuxStorageStack2.png" width="80%"></p>
+<p><img src="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0/DifferentLayers.png" width="80%"></p>
+<p>不难分析，越靠近设备层次，数据避免向上传递的层次就越多，性能就会越好。作者用测试数据说明了这一点，当用户代码通过BPF植入到Driver层时，加速比达到了接近两倍，几乎是避免了软件栈的开销。但是越靠近硬件层次，意味着要做的细致化管理也就越多，这也是本文在实现上的考虑重点。这项工作考虑将BPF函数挂载到driver层。</p>
+<hr>
+<h2 id="Design-amp-Implementation"><a href="#Design-amp-Implementation" class="headerlink" title="Design &amp; Implementation"></a>Design &amp; Implementation</h2><h3 id="Design-Principle"><a href="#Design-Principle" class="headerlink" title="Design Principle"></a>Design Principle</h3><p>这篇论文基于BPF机制提出了XRP框架，主要目的是减少对于on-disk的data structure执行搜索操作时的IO软件栈开销。也就是，用户将自己实现的用户态代码（BPF hook）通过XRP框架提供的挂载函数挂载到内核中，然后通过XRP提供的系统调用来执行一次<code>read</code>操作。在这个<code>read</code>操作中，首先被读取的数据会被调用用户自己注册的BPF函数，然后BPF hook会根据解析结果给设备发起更多IO请求（被称为<strong>resubmission</strong>），直到最后BPF hook判定可以返回给用户。</p>
+<p>XRP框架存在如下限制：</p>
+<ul>
+<li>每次IO请求只能处理一个文件。</li>
+<li>磁盘上的数据结构必须保证相对稳定。</li>
+<li>XRP框架不能支持写操作，也就是对设备的写还是需要经过传统的系统调用软件栈。</li>
+</ul>
+<hr>
+<h3 id="Challenge"><a href="#Challenge" class="headerlink" title="Challenge"></a>Challenge</h3><p>尽管思想很朴素，但XRP实现上有许多值得注意的细节：</p>
+<ul>
+<li>XRP的resubmission在BPF hook代码中使用的是逻辑块地址，将其转换成物理设备地址需要文件系统层的元数据，但resubmission发起的时机是在driver层，无法获知文件系统信息。</li>
+<li>如何对同一个文件的并发读写操作？如果在一个读操作resubmission的时候，有一个并发的写操作修改了文件数据，读操作能否读到正确的数据。</li>
+</ul>
+<p>其中，前一个问题被称为<strong>address translation</strong>问题，后一个问题被称为<strong>concurrency control</strong>问题。</p>
+<hr>
+<h3 id="Implementation"><a href="#Implementation" class="headerlink" title="Implementation"></a>Implementation</h3><h4 id="Address-translation"><a href="#Address-translation" class="headerlink" title="Address translation"></a>Address translation</h4><p>XRP框架通过在一次read请求中保存了一个该文件对应的inode指针来确保resubmission时能获知地址翻译必要的信息，这部分数据被称为metadata digest。</p>
+<p>XRP框架实现了两个函数：</p>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">update_mapping</span><span class="token punctuation">(</span><span class="token keyword">struct</span> <span class="token class-name">inode</span><span class="token operator">*</span> inode<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">void</span> <span class="token function">lookup_mapping</span><span class="token punctuation">(</span><span class="token keyword">struct</span> <span class="token class-name">inode</span><span class="token operator">*</span> inode<span class="token punctuation">,</span> <span class="token class-name">off_t</span> offset<span class="token punctuation">,</span> <span class="token class-name">size_t</span> len<span class="token punctuation">,</span> <span class="token keyword">struct</span> <span class="token class-name">mapping</span> <span class="token operator">*</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>这里的mapping是指从块设备的逻辑块号到物理块号的映射。当resubmission一个IO请求时，BPF hook会在一个context中写入下一次要读取的逻辑地址，然后XRP框架通过读取inode对应的mapping来将逻辑地址翻译为物理地址。</p>
+<p>而文件系统如果需要修改映射，则调用<code>update_mapping</code>来更新对应的extent tree。</p>
+<hr>
+<h4 id="Concurrency-Control"><a href="#Concurrency-Control" class="headerlink" title="Concurrency Control"></a>Concurrency Control</h4><p>这部分是关于mapping的concurrency control，一个resubmission的read请求可能会与另一个在该文件进行写入的操作在extent tree上发生读写冲突。为了解决这个问题，作者使用了类似OCC的方式，对extent tree维护一个version number，在读取数据前后分别对比version number是否发生了修改。</p>
+<hr>
+<h2 id="Case-Study"><a href="#Case-Study" class="headerlink" title="Case Study"></a>Case Study</h2><h3 id="Programming-Interface"><a href="#Programming-Interface" class="headerlink" title="Programming Interface"></a>Programming Interface</h3><p>XRP框架为用户提供了两个接口进行使用：</p>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">int</span> <span class="token function">bpf_prog_load</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> file<span class="token punctuation">,</span> <span class="token keyword">enum</span> <span class="token class-name">bpf_prog_type</span> type<span class="token punctuation">,</span>
+<span class="token keyword">struct</span> <span class="token class-name">bpf_object</span><span class="token operator">*</span><span class="token operator">*</span> pobj<span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token operator">*</span> prog_fd<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">read_xrp</span><span class="token punctuation">(</span><span class="token keyword">int</span> fd<span class="token punctuation">,</span> <span class="token keyword">void</span><span class="token operator">*</span> buf<span class="token punctuation">,</span> <span class="token class-name">size_t</span> count<span class="token punctuation">,</span> <span class="token class-name">off_t</span> offset<span class="token punctuation">,</span> <span class="token keyword">int</span> bpf_fd<span class="token punctuation">,</span><span class="token keyword">void</span><span class="token operator">*</span> scratch<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>第一个函数用于注册用户自己编写的BPF hook，该函数会在drvier层一次IO请求完成时被调用。这个BPF hook会根据读到的数据决定继续发起IO请求还是返回给用户。注册完成后，会返回这个hook的唯一标识符：prog_fd。</p>
+<p>第二个函数<code>read_xrp</code>类似于一个<code>read</code>的系统调用，前四个参数与<code>read</code>相同，<code>bpf_fd</code>用于标识在该read过程中哪个BPF hook被使用，<code>scratch</code>用来存储某些上下文信息，例如在一个B+Tree的key搜索过程中，该数据可以被用于存储目标key的值。</p>
+<p>BPF hook需要具有以下函数原型：</p>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">struct</span> <span class="token class-name">bpf_xrp</span> <span class="token punctuation">&#123;</span>
+	<span class="token comment">// Fields inspected outside BPF</span>
+	<span class="token keyword">char</span><span class="token operator">*</span> data<span class="token punctuation">;</span>
+	<span class="token keyword">int</span> done<span class="token punctuation">;</span>
+	<span class="token class-name">uint64_t</span> next_addr<span class="token punctuation">[</span><span class="token number">16</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+	<span class="token class-name">uint64_t</span> size<span class="token punctuation">[</span><span class="token number">16</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+	<span class="token comment">// Field for BPF function use only</span>
+	<span class="token keyword">char</span><span class="token operator">*</span> scratch
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token class-name">uint32_t</span> <span class="token function">BPF_PROG_TYPE_XRP</span><span class="token punctuation">(</span><span class="token keyword">struct</span> <span class="token class-name">bpf_xrp</span><span class="token operator">*</span> ctxt<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>也就是用户自己编写的BPF hook函数读取一个bpf_xrp结构体，这个结构体包含了上一次IO的结果, 存储在data中。用户的代码逻辑会解析data，然后将下一次要读取的IO数据地址写入到<code>next_addr</code>和<code>size</code>中。<code>done</code>用于表示是否要返回给用户态。</p>
+<hr>
+<h3 id="一个B-Tree搜索的例子"><a href="#一个B-Tree搜索的例子" class="headerlink" title="一个B+Tree搜索的例子"></a>一个B+Tree搜索的例子</h3><p><img src="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0/BPFKV.png" width="70%"></p>
+<p>上图展示了作者自己基于XRP框架实现的一个B+TreeKV中搜索过程的例子。为了简单起见，作者规定所有的key的大小都为8B，value的大小都为64B。B+Tree被存储在单独的文件中。上述代码很好理解，这里不再赘述。</p>
+<hr>
+<h2 id="Evaluation"><a href="#Evaluation" class="headerlink" title="Evaluation"></a>Evaluation</h2><p>作者利用XRP框架实现了BPFKV, 即一个B+Tree作为索引的简单key-value存储引擎。以及另一个使用XRP对WeiredTiger进行优化的存储引擎。实验的对比对象包括SPDK，普通的<code>read</code>系统调用，以及<code>io_uring</code>。</p>
+<p><img src="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0/evaluation1.png" width="100%"></p>
+<hr>
+<h2 id="Conclusion-amp-Thinking"><a href="#Conclusion-amp-Thinking" class="headerlink" title="Conclusion &amp; Thinking"></a>Conclusion &amp; Thinking</h2><p>这篇论文基于BPF机制实现了XRP框架，用于将部分逻辑代码offload到内核执行，从而减少了从内核拷贝到用户态的IO软件栈开销。但正如论文作者自己所说，这项工作也有一些局限性。例如XRP框架完全不支持写操作，对于一些Read-Modify-Write的场景不会太好。而这种场景是有的，例如数据库中SQL的update操作可能需要读上来一些record，然后根据某些列的值更新或不更新这些列，然后再写回设备。如果能在XRP中加入写的支持就能适应这种场景。</p>
+<p>另一个在读这篇文章时的问题是对论文中提到的concurrency control没有完全理解。如果读操作是类似于<code>read</code>那种读，那么在第一次读的时候就会锁住文件系统中的inode, 即使有后续的写操作也不会有读写冲突的情形。那么论文提出的一系列并发控制在文件系统层就能避免了，没有必要引入额外的机制。所以这里我猜测作者实现的<code>xrp_read</code>只有第一次read是线程安全的，后续的<code>resubmission</code>的可能会和其他write操作并发执行，因此需要额外的并发控制机制。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="https://Holworth.github.io"></a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://holworth.github.io/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0.html">https://holworth.github.io/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://Holworth.github.io" target="_blank">Hexo</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Linux-Kernel/">Linux Kernel</a><a class="post-meta__tags" href="/tags/Filesystem/">Filesystem</a><a class="post-meta__tags" href="/tags/Paper-Readings/">Paper Readings</a></div><div class="post_share"><div class="social-share" data-image="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg2.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/post/%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80.html"><img class="next-cover" src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg3.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">最短路径算法基础</div></div></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name"></div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">12</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">12</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0"><span class="toc-number">1.</span> <span class="toc-text">XRP: In-Kernel Storage Functions with eBPF阅读笔记</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Introduction"><span class="toc-number">1.1.</span> <span class="toc-text">Introduction</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Background-amp-Motivation"><span class="toc-number">1.2.</span> <span class="toc-text">Background &amp; Motivation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Linux%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%AD%98%E5%82%A8%E8%BD%AF%E4%BB%B6%E6%A0%88"><span class="toc-number">1.2.1.</span> <span class="toc-text">Linux系统的存储软件栈</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AD%98%E5%82%A8%E8%BD%AF%E4%BB%B6%E6%A0%88%E6%88%90%E4%B8%BA%E6%80%A7%E8%83%BD%E7%93%B6%E9%A2%88"><span class="toc-number">1.2.2.</span> <span class="toc-text">存储软件栈成为性能瓶颈</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#BPF%E6%9C%BA%E5%88%B6"><span class="toc-number">1.2.3.</span> <span class="toc-text">BPF机制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%A9%E7%94%A8BPF%E6%9C%BA%E5%88%B6%E7%BB%95%E8%BF%87%E9%83%A8%E5%88%86IO%E8%BD%AF%E4%BB%B6%E6%A0%88"><span class="toc-number">1.2.4.</span> <span class="toc-text">利用BPF机制绕过部分IO软件栈</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Design-amp-Implementation"><span class="toc-number">1.3.</span> <span class="toc-text">Design &amp; Implementation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Design-Principle"><span class="toc-number">1.3.1.</span> <span class="toc-text">Design Principle</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Challenge"><span class="toc-number">1.3.2.</span> <span class="toc-text">Challenge</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Implementation"><span class="toc-number">1.3.3.</span> <span class="toc-text">Implementation</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Address-translation"><span class="toc-number">1.3.3.1.</span> <span class="toc-text">Address translation</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Concurrency-Control"><span class="toc-number">1.3.3.2.</span> <span class="toc-text">Concurrency Control</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Case-Study"><span class="toc-number">1.4.</span> <span class="toc-text">Case Study</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Programming-Interface"><span class="toc-number">1.4.1.</span> <span class="toc-text">Programming Interface</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%80%E4%B8%AAB-Tree%E6%90%9C%E7%B4%A2%E7%9A%84%E4%BE%8B%E5%AD%90"><span class="toc-number">1.4.2.</span> <span class="toc-text">一个B+Tree搜索的例子</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Evaluation"><span class="toc-number">1.5.</span> <span class="toc-text">Evaluation</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Conclusion-amp-Thinking"><span class="toc-number">1.6.</span> <span class="toc-text">Conclusion &amp; Thinking</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0.html" title="XRP: In-Kernel Storage Functions with eBPF阅读笔记"><img src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg2.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="XRP: In-Kernel Storage Functions with eBPF阅读笔记"/></a><div class="content"><a class="title" href="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0.html" title="XRP: In-Kernel Storage Functions with eBPF阅读笔记">XRP: In-Kernel Storage Functions with eBPF阅读笔记</a><time datetime="2022-06-30T13:38:20.000Z" title="发表于 2022-06-30 21:38:20">2022-06-30</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80.html" title="最短路径算法基础"><img src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg3.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="最短路径算法基础"/></a><div class="content"><a class="title" href="/post/%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80.html" title="最短路径算法基础">最短路径算法基础</a><time datetime="2022-04-23T02:59:11.000Z" title="发表于 2022-04-23 10:59:11">2022-04-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Env.html" title="LevelDB阅读笔记-Env"><img src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg3.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="LevelDB阅读笔记-Env"/></a><div class="content"><a class="title" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Env.html" title="LevelDB阅读笔记-Env">LevelDB阅读笔记-Env</a><time datetime="2022-04-02T10:46:21.000Z" title="发表于 2022-04-02 18:46:21">2022-04-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Memtable.html" title="LevelDB阅读笔记-Memtable"><img src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg2.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="LevelDB阅读笔记-Memtable"/></a><div class="content"><a class="title" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Memtable.html" title="LevelDB阅读笔记-Memtable">LevelDB阅读笔记-Memtable</a><time datetime="2022-03-09T12:44:28.000Z" title="发表于 2022-03-09 20:44:28">2022-03-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/MIT6-824-Lab3A%E7%AC%94%E8%AE%B0.html" title="MIT6.824 Lab3A笔记"><img src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg2.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="MIT6.824 Lab3A笔记"/></a><div class="content"><a class="title" href="/post/MIT6-824-Lab3A%E7%AC%94%E8%AE%B0.html" title="MIT6.824 Lab3A笔记">MIT6.824 Lab3A笔记</a><time datetime="2022-03-04T13:21:14.000Z" title="发表于 2022-03-04 21:21:14">2022-03-04</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2022 By null</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.min.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
