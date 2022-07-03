@@ -1,0 +1,279 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Percolator: Google's transactional system | Hexo</title><meta name="keywords" content="Distributed System,Transaction,Paper Reading"><meta name="author"><meta name="copyright"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Percolator: Google’s transactional systemOverview本文介绍Google的上一代分布式事务系统：Percolator。Percolator首次出现在Google于2010年OSDI发表的论文：Large-scale Incremental Processing Using Distributed Transactions and Notiﬁcation">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Percolator: Google&#39;s transactional system">
+<meta property="og:url" content="https://holworth.github.io/post/Percolator-Google-s-transactional-system.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="Percolator: Google’s transactional systemOverview本文介绍Google的上一代分布式事务系统：Percolator。Percolator首次出现在Google于2010年OSDI发表的论文：Large-scale Incremental Processing Using Distributed Transactions and Notiﬁcation">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg3.png">
+<meta property="article:published_time" content="2022-07-02T14:45:30.000Z">
+<meta property="article:modified_time" content="2022-07-03T05:51:59.940Z">
+<meta property="article:tag" content="Distributed System">
+<meta property="article:tag" content="Transaction">
+<meta property="article:tag" content="Paper Reading">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg3.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://holworth.github.io/post/Percolator-Google-s-transactional-system"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"prismjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: true,
+    post: true
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Percolator: Google\'s transactional system',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-07-03 13:51:59'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 6.0.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">13</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">14</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Hexo</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">Percolator: Google's transactional system</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-07-02T14:45:30.000Z" title="发表于 2022-07-02 22:45:30">2022-07-02</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-07-03T05:51:59.940Z" title="更新于 2022-07-03 13:51:59">2022-07-03</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="Percolator: Google's transactional system"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="post-content" id="article-container"><h1 id="Percolator-Google’s-transactional-system"><a href="#Percolator-Google’s-transactional-system" class="headerlink" title="Percolator: Google’s transactional system"></a>Percolator: Google’s transactional system</h1><h2 id="Overview"><a href="#Overview" class="headerlink" title="Overview"></a>Overview</h2><p>本文介绍Google的上一代分布式事务系统：Percolator。Percolator首次出现在Google于2010年OSDI发表的论文：<em>Large-scale Incremental Processing Using Distributed Transactions and Notiﬁcations</em> 中。Google基于BigTable提供的单行事务语义实现了一个跨行，跨表的事务系统，称为Percolator，该系统基于2PC，支持Snapshot Isolation的隔离级别。TiDB在事务方面的实现也是基于Percolator模型，但是进行了一些优化，例如增加了悲观锁和Async commit。</p>
+<hr>
+<h2 id="Background-amp-Motivation"><a href="#Background-amp-Motivation" class="headerlink" title="Background &amp; Motivation"></a>Background &amp; Motivation</h2><p>在21世纪的第一个十年，Google陆续发表了GFS, BigTable, MapReduce, Spanner等系统用以支持各种大数据应用。Percolator也是在这样的背景下诞生的，正如论文原文的描述：</p>
+<blockquote>
+<p>Within Google, the primary application of Percolator is preparing web pages for inclusion in the live web search index</p>
+</blockquote>
+<p>Percolator最初的作用是用于搜索引擎中网页链接的更新等操作。这些操作类似于OLTP负载，每次只需要对部分较少的数据进行操作。MapReduce系统可以用于执行批处理任务，但是对OLTP型任务支持较差，除非你愿意只为了更新一小部分数据而扫描所有的数据；传统的关系型数据库可以胜任OLTP任务，但是Google的网页数据分布在数千台机器上，而传统的分布式数据库还难以达到这样的扩展性。具有很好的扩展性，并且提供简单的存储接口的BigTable被认为是执行这类任务的一个较好选择。因此，Google考虑在BigTable的基础上实现ACID特性的事务支持(为了方便程序员编程)，即Percolator系统。</p>
+<p>BigTable是Google开发的一个结构化的键值存储系统，详细设计可以参考Google于2006年OSDI发表的论文: <em>Bigtable: A Distributed Storage System for Structured Data</em>。BigTable本身已经支持了单行的事务，也就是：对于同一行的数据修改访问能够以事务的方式执行。Percolator在BigTable的基础上支持了跨行的事务，为编程人员提供了更加方便的接口。</p>
+<hr>
+<h2 id="Snapshot-Isolation"><a href="#Snapshot-Isolation" class="headerlink" title="Snapshot Isolation"></a>Snapshot Isolation</h2><p>Percolator实现了Snapshot Isolation[1],  简单来说，就是一个transaction能访问到的数据就好像在这个transaction开始之前的某个时刻的一个snapshot一样。而这个transaction对数据库所做的修改只是在这个snapshot上做修改，直到最后commit这个transaction时才能使修改对外界可见。</p>
+<p>Snapshot Isolation或许是MVCC的一个自然结果，它没有Serializable Isolation那么强的隔离性，因此在性能上有一定的优势。BigTable本身已经支持多版本的数据访问，这使得Percolator实现Snapshot Isolation相对简单。</p>
+<p>在Snapshot Isolation中，一个transaction的执行需要经过以下步骤：</p>
+<ol>
+<li>Transaction开始时获取一个单调递增的时间戳，称为start_ts；Transaction读取任意一个时间在start_ts之前的数据库快照。</li>
+<li>Transation在这个快照上对数据库进行修改或访问。</li>
+<li>当Transaction需要提交时，它获取一个时间戳，被称为commit_ts, commit_ts需要比start_ts和任何commit_ts都要大。Transaction会检查自己的write set中是否有与其他transaction冲突的，如果没有，则apply自己的修改到database中，即commit；否则当前transaciton abort。</li>
+</ol>
+<p>上述算法中的一个问题在于如何检测write set是否与其他某个transaction的write set冲突。一个简单的实现方法是对write set中的每个record上锁，同时用一个map来记录每个record最后被修改的transaction的timestamp，然后检查这个timestamp是否在区间[start_ts, commit_ts]中。</p>
+<p>实际上，将上述算法直接实现在BigTable里面就可以实现SI，但是这里有一些实现上的细节问题：</p>
+<ul>
+<li>上述算法需要一个Lock Manager, 而在分布式系统中实现一个全局的Lock Manager很困难。事实上，HBase在实现Snapshot Isolation的方案中使用了这种办法，HBase-SI将Lock和CommitTimeStamp存储在另一张表中，作为中心化结构。</li>
+<li>如果采用锁的方案，如何避免死锁。这回到了上一个问题，如果有一个全局的Lock Manager，可以采用死锁检测的方式来打破死锁，但如果没有这样的中心化结构又该如何处理？</li>
+<li>BigTable不是单机结构，在分布式系统中如何保证事务的ACID特性？一些已有的算法应该能派上用场，如2PC。</li>
+</ul>
+<hr>
+<h2 id="Percolator-Design"><a href="#Percolator-Design" class="headerlink" title="Percolator Design"></a>Percolator Design</h2><h3 id="Overview-1"><a href="#Overview-1" class="headerlink" title="Overview"></a>Overview</h3><p>Percolator的commit算法类似于2PC, 整个transaction在执行时先将修改操作缓存在client本地。在client发起commit请求时，执行2PC。commit过程分为两个阶段：<strong>prewrite</strong>和<strong>commit</strong>。其中prewrite会锁住要修改的行，然后将之前缓存的修改操作写入BigTable中，用一个特定版本号标识；commit会写类似于之前提到的commit log的数据，来确保prewrite中写入的数据对外界可见。只有在所有prewrite操作都成功时，commit操作才会执行，因此是两阶段的。</p>
+<hr>
+<h3 id="Transactional-Semantics"><a href="#Transactional-Semantics" class="headerlink" title="Transactional Semantics"></a>Transactional Semantics</h3><p>Percolator实现了Snapshot Isolation的隔离级别。Transaction只能读取start_ts(小于等于)之前的数据。对于修改操作，数据被先缓存到client本地，因此在事务被成功commit之前不会对数据库产生实际的修改。一个问题是如果一个transaction内部需要对同一个transaction内刚刚修改了的数据进行访问，那么读结果应该返回新结果还是旧结果？从论文提供的伪代码来看，会返回旧结果；但是按理说应该返回新结果比较合理。</p>
+<p><img src="/post/Percolator-Google-s-transactional-system/TxnTimeSeries.png" width="80%"></p>
+<p>上图的白点代表start_ts, 黑点代表commit_ts。Percolator保证一个transaction只能读到commit_ts小于等于它的start_ts的transaction提交的结果。</p>
+<hr>
+<h3 id="Transaction-Execution"><a href="#Transaction-Execution" class="headerlink" title="Transaction Execution"></a>Transaction Execution</h3><h4 id="Additional-Metadata"><a href="#Additional-Metadata" class="headerlink" title="Additional Metadata"></a>Additional Metadata</h4><p>Percolator实现在BigTable的基础之上，它实现了一套非侵入式的接口。也就是，在不修改BigTable内部实现的基础上，利用BigTable提供的单行事务和多版本机制来实现Percolator事务处理。为此，Percolator增加了如下的一些额外元数据：</p>
+<p><img src="/post/Percolator-Google-s-transactional-system/PercolatorMetadata.png" width="70%"></p>
+<p>其中值得关注的是<code>lock</code>和<code>write</code>列，<code>data</code>列是将原先的BigTable所存储的所有数据抽象为一个整体的column。<code>lock</code>列是一个用于并发控制的列，如果某一行正在被一个事务修改(指的是在prewrite阶段)，那么就给这行上锁，来避免被并发的事务修改；<code>write</code>列用于记录commit log, 也就是最近已经提交的修改了该行的transaction的id(id也就是timestamp，因为不同事务的start_ts和commit_ts不同，所以可以唯一标识一个txn)。</p>
+<h4 id="Execution-Process"><a href="#Execution-Process" class="headerlink" title="Execution Process"></a>Execution Process</h4><h5 id="事务的发起"><a href="#事务的发起" class="headerlink" title="事务的发起"></a>事务的发起</h5><p>一个事务由client发起，发起的方式是创建一个<code>Transaction</code>结构体，在创建这个结构体时，会首先从TSO(TimeStamp Oracle)中获取一个时间，称为start_ts,代表这个事务开始的时间。原论文中给出了一些实现伪代码，所以这里会结合伪代码来说明。(不得不说Google的论文这一点做的很好，结合代码可以让很多算法和概念变得容易理解)</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">class</span> <span class="token class-name">Transaction</span> <span class="token punctuation">&#123;</span>
+ <span class="token keyword">public</span><span class="token operator">:</span>
+  <span class="token keyword">struct</span> <span class="token class-name">Write</span> <span class="token punctuation">&#123;</span>
+    Row row<span class="token punctuation">;</span>
+    Column col<span class="token punctuation">;</span>
+    string value<span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+  vector<span class="token operator">&lt;</span>Write<span class="token operator">></span> writes_<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> start_ts_<span class="token punctuation">;</span>
+ 
+  <span class="token function">Transaction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token function">start_ts_</span><span class="token punctuation">(</span>oracle<span class="token punctuation">.</span><span class="token function">GetTimestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h5 id="事务执行"><a href="#事务执行" class="headerlink" title="事务执行"></a>事务执行</h5><p>事务执行包括<code>Get</code>和<code>Set</code>两个操作，前者从数据库的start_ts_之前的snapshot中获得数据，后者修改某个指定的行和列的数据。正如前面所说，<code>Set</code>操作并不会立刻修改BigTable，而是先被client缓存：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token class-name">Transaction</span><span class="token double-colon punctuation">::</span><span class="token function">Set</span><span class="token punctuation">(</span>Write write<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  writes_<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>write<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p><code>Get</code>操作会从数据库中获取数据，但是只获取那些修改发生在<code>start_ts_</code>之前的数据。这里可以直接使用BigTable提供的多版本机制来读取verion小于<code>start_ts_</code>的数据，另一个值得注意的问题是如果当前读取的行有一个lock怎么办，由于读操作读的是之前的版本，所以检查lock时也是检查之前版本的lock, 如果有这么一个lock，那么说明之前的某个事务还没有提交，或者提交了但是没有来得及清理lock。当前执行的事务可能需要回退等待事务提交，或者清除这个failed transaction留下的lock。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">bool</span> <span class="token class-name">Transaction</span><span class="token double-colon punctuation">::</span><span class="token function">Get</span><span class="token punctuation">(</span>Row row<span class="token punctuation">,</span> Column c<span class="token punctuation">,</span> string<span class="token operator">*</span> value<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    bigtable<span class="token double-colon punctuation">::</span>Txn T <span class="token operator">=</span> bigtable<span class="token double-colon punctuation">::</span><span class="token function">StartRowTransaction</span><span class="token punctuation">(</span>row<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>T<span class="token punctuation">.</span><span class="token function">Read</span><span class="token punctuation">(</span>row<span class="token punctuation">,</span> c<span class="token operator">+</span><span class="token string">"lock"</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">,</span> start_ts_<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token function">BackoffAndMaybeCleanLock</span><span class="token punctuation">(</span>row<span class="token punctuation">,</span> c<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">continue</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    latest_write <span class="token operator">=</span> T<span class="token punctuation">.</span><span class="token function">Read</span><span class="token punctuation">(</span>row<span class="token punctuation">,</span> c<span class="token operator">+</span><span class="token string">"write"</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">,</span> start_ts_<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>latest_write<span class="token punctuation">.</span><span class="token function">found</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token comment">// No data for this cell</span>
+      <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">int</span> data_ts <span class="token operator">=</span> latest_write<span class="token punctuation">.</span><span class="token function">start_timestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token operator">*</span>value <span class="token operator">=</span> T<span class="token punctuation">.</span><span class="token function">Read</span><span class="token punctuation">(</span>row<span class="token punctuation">,</span> c<span class="token operator">+</span><span class="token string">"data"</span><span class="token punctuation">,</span> <span class="token punctuation">[</span>data_ts<span class="token punctuation">,</span> data_ts<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>接下来，Get操作会查看这个cell(row + column)是否有已经提交了的数据（通过查看write列，也就是commit log), 如果有，那么读取最近一个commit log的start_ts, 它的数据就是我们要读的数据。</p>
+<p>这里的Get操作保证了Transaction Semantics一节中的语义：Get操作只会读取那些在<code>start_ts</code>之前被提交的数据，这里的<code>write</code>列中的数据形式如下：<code>commit_ts: start_ts</code>, 其中<code>commit_ts</code>是BigTable中的版本号，<code>start_ts</code>是BigTable中存储的数据，在后面会讲，<code>commit_ts</code>就是一个事务提交的时间戳，因此<code>T.Read(row, c+&quot;write&quot;, [0, start_ts_])</code>就是在读一个事务的开始时间，这个事务的版本号&lt;=<code>start_ts_</code>,即这个事务的提交时间晚于<code>start_ts_</code>。而这个事务在数据库中的版本是由<code>start_ts_</code>唯一确定的。</p>
+<h5 id="事务提交"><a href="#事务提交" class="headerlink" title="事务提交"></a>事务提交</h5><p><strong>Prewrite预写</strong></p>
+<p>Percolator的事务提交采用了2PC的方式，所有在Client端缓存的修改先通过<code>Prewrite</code>写到数据库中，如果有任何一个写入失败那么事务将abort；如果所有预写成功，client会修改<code>write</code>列，来使得事务的修改对其他事务可见。</p>
+<p>(说这个过程是2PC其实我不太理解，因为我并没有看到它和分布式事务有什么关系，一切都是在BigTable已经提供的单行分布式事务抽象下执行的，所以我更愿意将其理解为一个单机的2PC; 还是说一切由两个阶段组成的commit过程，无论单机还是分布式，都叫2PC?)</p>
+<p>对于事务提交，Percolator会在这个事务的所有修改中选择一个，称为Primary，作为整个事务的互斥点。所谓互斥点的意思就是，如果这个修改对应的行被提交了(指它的write列被对应修改了)，那么就认为这个事务已经提交了。否则，这个事务没有提交。这样设计的目的是解决故障问题，如果一个事务的client crash了，那么它crash只会导致两种结果，要么这个txn的primary被提交了；要么没被提交。后续的transaction可以根据这两种分支来做相应的处理。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">bool</span> <span class="token class-name">Transaction</span><span class="token double-colon punctuation">::</span><span class="token function">Prewrite</span><span class="token punctuation">(</span>Write w<span class="token punctuation">,</span> Write primary<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  Column c <span class="token operator">=</span> w<span class="token punctuation">.</span>col<span class="token punctuation">;</span>
+  bigtable<span class="token double-colon punctuation">::</span>Txn T <span class="token operator">=</span> bigtable<span class="token double-colon punctuation">::</span><span class="token function">StartRowTransaction</span><span class="token punctuation">(</span>w<span class="token punctuation">.</span>row<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>T<span class="token punctuation">.</span><span class="token function">Read</span><span class="token punctuation">(</span>w<span class="token punctuation">.</span>row<span class="token punctuation">,</span> c<span class="token operator">+</span><span class="token string">"write"</span><span class="token punctuation">,</span> <span class="token punctuation">[</span>start_ts_<span class="token punctuation">,</span> inf<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>T<span class="token punctuation">.</span><span class="token function">Read</span><span class="token punctuation">(</span>w<span class="token punctuation">.</span>row<span class="token punctuation">,</span> c<span class="token operator">+</span><span class="token string">"lock"</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">,</span> inf<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  T<span class="token punctuation">.</span><span class="token function">Write</span><span class="token punctuation">(</span>w<span class="token punctuation">.</span>row<span class="token punctuation">,</span> c<span class="token operator">+</span><span class="token string">"data"</span><span class="token punctuation">,</span> start_ts_<span class="token punctuation">,</span> w<span class="token punctuation">.</span>value<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  T<span class="token punctuation">.</span><span class="token function">Write</span><span class="token punctuation">(</span>w<span class="token punctuation">.</span>row<span class="token punctuation">,</span> c<span class="token operator">+</span><span class="token string">"lock"</span><span class="token punctuation">,</span> start_ts_<span class="token punctuation">,</span> <span class="token punctuation">&#123;</span>primary<span class="token punctuation">.</span>row<span class="token punctuation">,</span> primary<span class="token punctuation">.</span>col<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> T<span class="token punctuation">.</span><span class="token function">Commit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>上述代码描述了对一个Write操作执行<code>prewrite</code>的过程，<code>prewrite</code>是对一行执行<code>read-modify-update</code>的过程，因此可以使用BigTable提供的行级事务来确保正确性。</p>
+<p>正如前面在Snapshot Isolation一节描述的，<code>prewrite</code>检查冲突是否发生：</p>
+<ul>
+<li>是否有一个transaction已经提交了(第4行)，这个transaction的commit_ts大于当前事务的start_ts, 说明二者在时间上有交集，又因为二者同时修改了同一个行，所以空间上有交集。根据SI的要求，两个冲突的事务只能有一个能成功，所以当前事务必须abort。</li>
+<li>检查当前的行是否已经被上锁。这里的本意应当是避免两个事务同时修改一个行，但是这里检查的范围是<code>[0, inf]</code>,也就是之前事务遗留的锁也可能导致当前事务abort。对此，我的解释只能是在之前系统已经清除了所有遗留lock。</li>
+</ul>
+<p>当完成上述检查之后，当前事务将修改应用到BigTable中。这里写了lock列，如果这个write是primary的，那么lock列的内容可能是一个PRIMARY LOCK标志之类的东西；否则secondary的write会在这个列写下primary lock的指针。当后续因为client crash，新的transaction需要清理lock时，可以通过这个指针找到当时事务的primary write，从而确定当时事务的状态。</p>
+<p><strong>正式提交</strong></p>
+<p>当调用<code>Transaction::Commit</code>时，用户将这个事务进行提交，这个函数内部分为两个阶段：首先对所有write执行prewrite，通过后再正式提交：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">bool</span> <span class="token class-name">Transaction</span><span class="token double-colon punctuation">::</span><span class="token function">Commit</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// Phase1: Prewrite all write</span>
+  Write primary <span class="token operator">=</span> writes_<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  vector<span class="token operator">&lt;</span>Write<span class="token operator">></span> <span class="token function">secondaries</span><span class="token punctuation">(</span>writes_<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">,</span> writes_<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">Prewrite</span><span class="token punctuation">(</span>primary<span class="token punctuation">,</span> primary<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span>write <span class="token operator">:</span> writes_<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">Prewrite</span><span class="token punctuation">(</span>write<span class="token punctuation">,</span> primary<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+  
+  <span class="token comment">// Phase2: Make the modification visable</span>
+  <span class="token keyword">int</span> commit_ts <span class="token operator">=</span> oracle_<span class="token punctuation">.</span><span class="token function">GetTimeStamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Write p <span class="token operator">=</span> priamry<span class="token punctuation">;</span>
+  bigtable<span class="token double-colon punctuation">::</span>Txn T <span class="token operator">=</span> bigtable<span class="token double-colon punctuation">::</span><span class="token function">StartRowTransaction</span><span class="token punctuation">(</span>p<span class="token punctuation">.</span>row<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>T<span class="token punctuation">.</span><span class="token function">Read</span><span class="token punctuation">(</span>p<span class="token punctuation">.</span>row<span class="token punctuation">,</span> p<span class="token punctuation">.</span>col<span class="token operator">+</span><span class="token string">"lock"</span><span class="token punctuation">,</span> <span class="token punctuation">[</span>start_ts_<span class="token punctuation">,</span> start_ts_<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  T<span class="token punctuation">.</span><span class="token function">Write</span><span class="token punctuation">(</span>p<span class="token punctuation">.</span>row<span class="token punctuation">,</span> p<span class="token punctuation">.</span>col <span class="token operator">+</span> <span class="token string">"write"</span><span class="token punctuation">,</span> commit_ts<span class="token punctuation">,</span> start_ts_<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  T<span class="token punctuation">.</span><span class="token function">Erase</span><span class="token punctuation">(</span>p<span class="token punctuation">.</span>row<span class="token punctuation">,</span> p<span class="token punctuation">.</span>col <span class="token operator">+</span> <span class="token string">"lock"</span><span class="token punctuation">,</span> commit_ts<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>T<span class="token punctuation">.</span><span class="token function">Commit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span>Write w <span class="token operator">:</span> secondaries<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> 
+    bigtable<span class="token double-colon punctuation">::</span><span class="token function">Write</span><span class="token punctuation">(</span>w<span class="token punctuation">.</span>row<span class="token punctuation">,</span> w<span class="token punctuation">.</span>col<span class="token operator">+</span><span class="token string">"write"</span><span class="token punctuation">,</span>commit_ts<span class="token punctuation">,</span> start_ts_<span class="token punctuation">)</span><span class="token punctuation">;</span> 
+    bigtable<span class="token double-colon punctuation">::</span><span class="token function">Erase</span><span class="token punctuation">(</span>w<span class="token punctuation">.</span>row<span class="token punctuation">,</span> w<span class="token punctuation">.</span>col<span class="token operator">+</span><span class="token string">"lock"</span><span class="token punctuation">,</span>commit ts<span class="token punctuation">)</span><span class="token punctuation">;</span> 
+  <span class="token punctuation">&#125;</span> 
+  <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>当一个Transaction的primary write被commit之后，这个事务就被认为已经提交了，所以在commit时primary write是首先被提交的。值得注意的是在18行，在primary write被提交时需要先检查lock是否还存在，这里让我比较疑惑的是在什么情况下这个lock会被清除。因为第5行的<code>Prewrite(primary, primary)</code>如果成功，那么lock列一定是被写入了数据的，可能是有另一个并发的事务清除了这里的lock？</p>
+<hr>
+<h4 id="Fail-Transactions"><a href="#Fail-Transactions" class="headerlink" title="Fail Transactions"></a>Fail Transactions</h4><p>一些事务可能因为Client的崩溃导致执行到一半就没能进行下去，因此会在BigTable中留下不完整的状态。判断一个事务是否成功commit的标准是这个事务的primary事务是否被提交，如果被提交那么这个事务就认为被提交了。</p>
+<p>当后续事务访问BigTable时可能会遇到一些残留的lock，它们需要决定是roll forward还是roll back。通过读取这些lock指向的primary write lock，它们可以决定crash的transaction是否已经commit。</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><p>[1] Berenson H, Bernstein P, Gray J, et al. <em>A critique of ANSI SQL isolation levels</em>[C]//ACM SIGMOD Record. ACM, 1995, 24(2): 1-10.</p>
+<p>[2] Zhang C, De Sterck H. <em>Hbasesi: Multi-row distributed transactions with global strong snapshot isolation on clouds[J]</em>. Scalable Computing: Practice and Experience, 2011, 12(2): 209-226.</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="https://Holworth.github.io"></a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://holworth.github.io/post/Percolator-Google-s-transactional-system.html">https://holworth.github.io/post/Percolator-Google-s-transactional-system.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://Holworth.github.io" target="_blank">Hexo</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Distributed-System/">Distributed System</a><a class="post-meta__tags" href="/tags/Transaction/">Transaction</a><a class="post-meta__tags" href="/tags/Paper-Reading/">Paper Reading</a></div><div class="post_share"><div class="social-share" data-image="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg3.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0.html"><img class="next-cover" src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg3.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">XRP: In-Kernel Storage Functions with eBPF阅读笔记</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/post/GFS-Reading-Notes.html" title="GFS Reading Notes"><img class="cover" src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-01-25</div><div class="title">GFS Reading Notes</div></div></a></div><div><a href="/post/BigTable-Reading-Notes.html" title="BigTable Reading Notes"><img class="cover" src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-01-26</div><div class="title">BigTable Reading Notes</div></div></a></div><div><a href="/post/MIT6-824-Lab3A%E7%AC%94%E8%AE%B0.html" title="MIT6.824 Lab3A笔记"><img class="cover" src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg2.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-03-04</div><div class="title">MIT6.824 Lab3A笔记</div></div></a></div><div><a href="/post/MapReduce-Reading-Notes.html" title="MapReduce Reading Notes"><img class="cover" src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg3.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-01-25</div><div class="title">MapReduce Reading Notes</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name"></div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">13</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">14</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Percolator-Google%E2%80%99s-transactional-system"><span class="toc-number">1.</span> <span class="toc-text">Percolator: Google’s transactional system</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Overview"><span class="toc-number">1.1.</span> <span class="toc-text">Overview</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Background-amp-Motivation"><span class="toc-number">1.2.</span> <span class="toc-text">Background &amp; Motivation</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Snapshot-Isolation"><span class="toc-number">1.3.</span> <span class="toc-text">Snapshot Isolation</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Percolator-Design"><span class="toc-number">1.4.</span> <span class="toc-text">Percolator Design</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Overview-1"><span class="toc-number">1.4.1.</span> <span class="toc-text">Overview</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Transactional-Semantics"><span class="toc-number">1.4.2.</span> <span class="toc-text">Transactional Semantics</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Transaction-Execution"><span class="toc-number">1.4.3.</span> <span class="toc-text">Transaction Execution</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Additional-Metadata"><span class="toc-number">1.4.3.1.</span> <span class="toc-text">Additional Metadata</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Execution-Process"><span class="toc-number">1.4.3.2.</span> <span class="toc-text">Execution Process</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#%E4%BA%8B%E5%8A%A1%E7%9A%84%E5%8F%91%E8%B5%B7"><span class="toc-number">1.4.3.2.1.</span> <span class="toc-text">事务的发起</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E4%BA%8B%E5%8A%A1%E6%89%A7%E8%A1%8C"><span class="toc-number">1.4.3.2.2.</span> <span class="toc-text">事务执行</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E4%BA%8B%E5%8A%A1%E6%8F%90%E4%BA%A4"><span class="toc-number">1.4.3.2.3.</span> <span class="toc-text">事务提交</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Fail-Transactions"><span class="toc-number">1.4.3.3.</span> <span class="toc-text">Fail Transactions</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Reference"><span class="toc-number">1.5.</span> <span class="toc-text">Reference</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/post/Percolator-Google-s-transactional-system.html" title="Percolator: Google's transactional system"><img src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg3.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Percolator: Google's transactional system"/></a><div class="content"><a class="title" href="/post/Percolator-Google-s-transactional-system.html" title="Percolator: Google's transactional system">Percolator: Google's transactional system</a><time datetime="2022-07-02T14:45:30.000Z" title="发表于 2022-07-02 22:45:30">2022-07-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0.html" title="XRP: In-Kernel Storage Functions with eBPF阅读笔记"><img src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg3.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="XRP: In-Kernel Storage Functions with eBPF阅读笔记"/></a><div class="content"><a class="title" href="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0.html" title="XRP: In-Kernel Storage Functions with eBPF阅读笔记">XRP: In-Kernel Storage Functions with eBPF阅读笔记</a><time datetime="2022-06-30T13:38:20.000Z" title="发表于 2022-06-30 21:38:20">2022-06-30</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80.html" title="最短路径算法基础"><img src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg2.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="最短路径算法基础"/></a><div class="content"><a class="title" href="/post/%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84%E7%AE%97%E6%B3%95%E5%9F%BA%E7%A1%80.html" title="最短路径算法基础">最短路径算法基础</a><time datetime="2022-04-23T02:59:11.000Z" title="发表于 2022-04-23 10:59:11">2022-04-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Env.html" title="LevelDB阅读笔记-Env"><img src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg2.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="LevelDB阅读笔记-Env"/></a><div class="content"><a class="title" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Env.html" title="LevelDB阅读笔记-Env">LevelDB阅读笔记-Env</a><time datetime="2022-04-02T10:46:21.000Z" title="发表于 2022-04-02 18:46:21">2022-04-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Memtable.html" title="LevelDB阅读笔记-Memtable"><img src="https://fastly.jsdelivr.net/gh/jerryc127/CDN@latest/cover/default_bg.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="LevelDB阅读笔记-Memtable"/></a><div class="content"><a class="title" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Memtable.html" title="LevelDB阅读笔记-Memtable">LevelDB阅读笔记-Memtable</a><time datetime="2022-03-09T12:44:28.000Z" title="发表于 2022-03-09 20:44:28">2022-03-09</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2022 By null</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.min.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
