@@ -1,0 +1,429 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>TinyKV Course: RaftStore源码解析 | Hexo</title><meta name="keywords" content="Raft,TinyKV,PingCAP"><meta name="author"><meta name="copyright"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="TinyKV RaftStore源码解析TinyKV Course的Lab2B要求我们基于Raft Module实现一个key-value存储服务，在涉及到的模块中最重要的就是raftstore。 因此我们先对其相关的代码进行阅读，本文是代码阅读的总结，可能会随着后面阅读的深入继续更新。 Overviewraftstore是TinyKV中Raft存储的核心部分，它将raft::RawNode， s">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TinyKV Course: RaftStore源码解析">
+<meta property="og:url" content="https://holworth.github.io/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="TinyKV RaftStore源码解析TinyKV Course的Lab2B要求我们基于Raft Module实现一个key-value存储服务，在涉及到的模块中最重要的就是raftstore。 因此我们先对其相关的代码进行阅读，本文是代码阅读的总结，可能会随着后面阅读的深入继续更新。 Overviewraftstore是TinyKV中Raft存储的核心部分，它将raft::RawNode， s">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2022-07-12T09:51:17.000Z">
+<meta property="article:modified_time" content="2022-07-14T13:44:18.864Z">
+<meta property="article:tag" content="Raft">
+<meta property="article:tag" content="TinyKV">
+<meta property="article:tag" content="PingCAP">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://holworth.github.io/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"prismjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: true,
+    post: true
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'TinyKV Course: RaftStore源码解析',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-07-14 21:44:18'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 6.0.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">16</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">19</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Hexo</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">TinyKV Course: RaftStore源码解析</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-07-12T09:51:17.000Z" title="发表于 2022-07-12 17:51:17">2022-07-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-07-14T13:44:18.864Z" title="更新于 2022-07-14 21:44:18">2022-07-14</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">3.7k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>14分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="TinyKV Course: RaftStore源码解析"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="TinyKV-RaftStore源码解析"><a href="#TinyKV-RaftStore源码解析" class="headerlink" title="TinyKV RaftStore源码解析"></a>TinyKV RaftStore源码解析</h1><p>TinyKV Course的Lab2B要求我们基于Raft Module实现一个key-value存储服务，在涉及到的模块中最重要的就是<code>raftstore</code>。 因此我们先对其相关的代码进行阅读，本文是代码阅读的总结，可能会随着后面阅读的深入继续更新。</p>
+<h2 id="Overview"><a href="#Overview" class="headerlink" title="Overview"></a>Overview</h2><p><code>raftstore</code>是TinyKV中Raft存储的核心部分，它将<code>raft::RawNode</code>， <code>storage</code>, <code>Transport</code>等部分拼接在了一起。并且由于TiKV采用的是Multi-Raft, 一台服务机器上可能会运行多个raft peer, 这些不同region的raft peer都被同一个<code>raftstore</code>所管理。</p>
+<p><img src="/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/raftstoreoverview.svg"></p>
+<p>上图展示了<code>raftstore</code>大概的结构，这里并没有展示一个<code>raftstore</code>结构体中的所有数据成员，而是选择了一些较为关键的部分。包括如下部分：</p>
+<ul>
+<li><code>router</code>: 由于一个<code>raftstore</code>中可能运行着多个raft peer,所以<code>raftstore</code>需要对收到的message按照region id进行分发，每个raft peer独立地处理自己这个raft region中的数据。router结构就起到这个分发的作用。</li>
+<li><code>GlobalContext</code>：保存了raftstore运行时的一些上下文信息，这里展示了两个最重要的部分：<code>Transport</code>用于发送raft message给其他raftstore, <code>Engines</code>包含了两个持久化的key-value数据库，一个用于持久化raft log，一个作为raft的状态机。因为raftstore里面有多个来自不同region的raft peer，所以需要在RaftDB中进行区分，区分的方式是使用<code>region_id</code>作为key的prefix。</li>
+<li><code>Ticker</code>: 周期性地发送时钟tick信息，用于驱动raft peer的状态向前更新。</li>
+<li><code>RaftWorker</code>: 一个周期性运行的worker，它会在一个for loop中做以下工作：查询是否有其他raft server发来的消息，如果有则对其进行处理：<code>NewMsgHandler()</code>； 对每个raft peer进行状态更新，持久化log entry，apply entry到state machine等。</li>
+<li><code>Workers</code>: 一些其他相关的<code>Worker</code>， 例如raft需要定期做log compaction等动作。</li>
+</ul>
+<hr>
+<h2 id="Source-Code-Overview"><a href="#Source-Code-Overview" class="headerlink" title="Source Code Overview"></a>Source Code Overview</h2><p>在正式开始解析代码之前，我们需要先对每个模块包含了哪些类，以及每个类包含了哪些成员数据进行调查。经过阅读，相关的类以及各自的成员如下：</p>
+<p><img src="/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/raftstorecodeuml.svg"></p>
+<p>在上面的UML图中，我们将<code>raftstore</code>划分为了四个模块：</p>
+<ul>
+<li><code>Ticker Module</code>: 作为整个raftstore的ticker模块，不断发出tick信号来驱动整个raftstore进行对应的状态更新等操作。</li>
+<li><code>raft module</code>: 作为整个raftstore最核心的部分，raft module的核心数据结构是<code>peer</code>, 一个peer是对<code>raft.RawNode</code>的进一步封装。包含了存储模块，snapshot模块等内容。 <code>RaftWorker</code>根据tick信号来不断更新raft模块中每个raft peer的状态。</li>
+<li><code>storage module</code>: 包含了<code>PeerStorage</code>, 这是一个对<code>raft.Storage</code>接口的实现，用于读取和持久化raft相关的持久化数据。其底层实现采用了一个持久化键值数据库<code>badger.DB</code></li>
+<li><code>GloablContext</code>: 包含了各个模块在运行时需要的一些上下文信息，例如raft peer在发送消息时需要<code>Transport</code>来发送。</li>
+</ul>
+<p>综上所述，<code>raftstore</code>就是将上述各个模块链接在一起的adapter， 它将各个部分初始化，例如从底层的存储系统中读取之前已经存在的raft peer状态，初始化状态机等；然后创建一个<code>RaftWorker</code>持续在<code>TickDriver</code>的驱动下对各个部分进行更新操作。</p>
+<hr>
+<h2 id="Ticker-Module"><a href="#Ticker-Module" class="headerlink" title="Ticker Module"></a>Ticker Module</h2><h3 id="Data-structure"><a href="#Data-structure" class="headerlink" title="Data structure"></a>Data structure</h3><p>我们首先对Ticker Module进行梳理，因为这部分代码相对比较简单，和其他模块的耦合也比较松。可以单独拿出来作为一个独立的模块。Ticker在整个Raft模块中的作用就是每过一段时间就发出一个时钟信号，由这个时钟信号来驱动Raft，snapshot，Log GC等模块的工作向前运作。</p>
+<p>TickerModule模块的内容如下：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> tickDriver <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	baseTickInterval time<span class="token punctuation">.</span>Duration
+	newRegionCh      <span class="token keyword">chan</span> <span class="token builtin">uint64</span>
+	regions          <span class="token keyword">map</span><span class="token punctuation">[</span><span class="token builtin">uint64</span><span class="token punctuation">]</span><span class="token keyword">struct</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+	router           <span class="token operator">*</span>router
+	storeTicker      <span class="token operator">*</span>ticker
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">type</span> ticker <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	regionID  <span class="token builtin">uint64</span>
+	tick      <span class="token builtin">int64</span>
+	schedules <span class="token punctuation">[</span><span class="token punctuation">]</span>tickSchedule
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">type</span> tickSchedule <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	runAt    <span class="token builtin">int64</span>
+	interval <span class="token builtin">int64</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>每个域的作用如下：</p>
+<ul>
+<li><code>baseTickInterval</code>说明了这个<code>TickDriver</code>每过多少时间需要发出一个Tick信号。</li>
+<li><code>newRegionCh</code>用于接收是否有一个<code>newRegion</code>的请求。</li>
+<li><code>regions</code>保存了在这个server上运行的所有raft peer的RegionID。</li>
+<li><code>router</code>提供了<code>send</code>接口，tickDriver可以使用该接口向一个指定的region的peer发出tick消息；</li>
+<li><code>storeTicker</code>保存了和store相关的元数据，在raftstore中，除了Raft模块本身需要周期性地获取tick消息向前更新状态，一些store活动也需要向前执行, 例如Snapshot, LogGC等。这些活动也都是周期性进行的，所以需要一个tick。<code>storeTicker</code>保存了这些活动的tick元数据，包括：每多少个tick触发一次；现在已经执行了多少个tick了。</li>
+</ul>
+<p>对于<code>ticker</code>， 它包含了一个<code>tickSchedule</code>数组，该数组使用一个int类型来索引，其值实际上枚举了几种store活动的情况：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">const</span> <span class="token punctuation">(</span>
+	PeerTickRaft               PeerTick <span class="token operator">=</span> <span class="token number">0</span>
+	PeerTickRaftLogGC          PeerTick <span class="token operator">=</span> <span class="token number">1</span>
+	PeerTickSplitRegionCheck   PeerTick <span class="token operator">=</span> <span class="token number">2</span>
+	PeerTickSchedulerHeartbeat PeerTick <span class="token operator">=</span> <span class="token number">3</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">const</span> <span class="token punctuation">(</span>
+	StoreTickSchedulerStoreHeartbeat StoreTick <span class="token operator">=</span> <span class="token number">1</span>
+	StoreTickSnapGC                  StoreTick <span class="token operator">=</span> <span class="token number">2</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>每个<code>tickSchedule</code>包含了一个interval和一个runAt元素，<code>interval</code>用于表示该活动应该每多少个tick执行一次；<code>runAt</code>表示该活动下一轮应该在哪个tick时运行。当一个store动作被执行之后，可以通过<code>runAt = tick + interval</code>来更新该store动作的下一次运行时间。这实际上就是<code>ticker.Schedule()</code>的执行流程。</p>
+<hr>
+<h3 id="Ticker-Running"><a href="#Ticker-Running" class="headerlink" title="Ticker Running"></a>Ticker Running</h3><p><code>TickDriver</code>通过<code>run</code>函数来启动一个<code>ticker</code>， 这个ticker将会在一个死循环中运行下去，每过一段时间发出一个tick信号给router中的raft peer，然后检查是否有对应的store活动可以可以执行：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>r <span class="token operator">*</span>tickDriver<span class="token punctuation">)</span> <span class="token function">run</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	timer <span class="token operator">:=</span> time<span class="token punctuation">.</span><span class="token function">Tick</span><span class="token punctuation">(</span>r<span class="token punctuation">.</span>baseTickInterval<span class="token punctuation">)</span>
+	<span class="token keyword">for</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">select</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">case</span> <span class="token operator">&lt;-</span>timer<span class="token punctuation">:</span>
+			<span class="token keyword">for</span> regionID <span class="token operator">:=</span> <span class="token keyword">range</span> r<span class="token punctuation">.</span>regions <span class="token punctuation">&#123;</span>
+				<span class="token keyword">if</span> r<span class="token punctuation">.</span>router<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>regionID<span class="token punctuation">,</span> message<span class="token punctuation">.</span><span class="token function">NewPeerMsg</span><span class="token punctuation">(</span>message<span class="token punctuation">.</span>MsgTypeTick<span class="token punctuation">,</span> regionID<span class="token punctuation">,</span> <span class="token boolean">nil</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+					<span class="token function">delete</span><span class="token punctuation">(</span>r<span class="token punctuation">.</span>regions<span class="token punctuation">,</span> regionID<span class="token punctuation">)</span>
+				<span class="token punctuation">&#125;</span>
+			<span class="token punctuation">&#125;</span>
+			r<span class="token punctuation">.</span><span class="token function">tickStore</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+		<span class="token keyword">case</span> regionID<span class="token punctuation">,</span> ok <span class="token operator">:=</span> <span class="token operator">&lt;-</span>r<span class="token punctuation">.</span>newRegionCh<span class="token punctuation">:</span>
+			<span class="token keyword">if</span> <span class="token operator">!</span>ok <span class="token punctuation">&#123;</span>
+				<span class="token keyword">return</span>
+			<span class="token punctuation">&#125;</span>
+			r<span class="token punctuation">.</span>regions<span class="token punctuation">[</span>regionID<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">struct</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>run</code>函数创建一个<code>timer</code>， 这个<code>timer</code>是一个channel，另一端会每过一段时间就发出一个一个time结构体。在<code>run</code>函数中，使用一个死循环来不断接收来自这个timer的消息。而每经过<code>baseTickInterval</code>的时间，<code>tickDriver</code>就会给<code>router</code>中保存的每个peer发出一个<code>MsgTypeTick</code>消息，使得Raft能知道已经经过了一个tick了，而<code>RaftWorker</code>也会在一个死循环中检查当前是否有tick消息，然后调用<code>raft.RawNode</code>的step来使得raft的状态得到更新。</p>
+<p>每经过一个<code>tick</code>，<code>TickDriver</code>会在<code>storeTicker</code>中调用<code>tickStore</code>来检查是否有可执行的store活动, 即<code>tickStore</code>函数：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go">
+<span class="token keyword">func</span> <span class="token punctuation">(</span>r <span class="token operator">*</span>tickDriver<span class="token punctuation">)</span> <span class="token function">tickStore</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	r<span class="token punctuation">.</span>storeTicker<span class="token punctuation">.</span><span class="token function">tickClock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">for</span> i <span class="token operator">:=</span> <span class="token keyword">range</span> r<span class="token punctuation">.</span>storeTicker<span class="token punctuation">.</span>schedules <span class="token punctuation">&#123;</span>
+		<span class="token keyword">if</span> r<span class="token punctuation">.</span>storeTicker<span class="token punctuation">.</span><span class="token function">isOnStoreTick</span><span class="token punctuation">(</span><span class="token function">StoreTick</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			r<span class="token punctuation">.</span>router<span class="token punctuation">.</span><span class="token function">sendStore</span><span class="token punctuation">(</span>message<span class="token punctuation">.</span><span class="token function">NewMsg</span><span class="token punctuation">(</span>message<span class="token punctuation">.</span>MsgTypeStoreTick<span class="token punctuation">,</span> <span class="token function">StoreTick</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>isOnStoreTick</code>就是检查之前提到的<code>tickSchedule</code>中每个store动作的runAt是否达到，如果达到，则通过<code>sendStore</code>发起一个store动作调用。</p>
+<h2 id="Storage-Module"><a href="#Storage-Module" class="headerlink" title="Storage Module"></a>Storage Module</h2><p>接下来我们介绍storage module, <code>storage module</code>主要实现了一个类<code>PeerStorage</code>， 作为raft模块的底层持久化存储部分，该类实现了<code>raft.Storage</code>这一接口。</p>
+<h3 id="PeerStorage-data-structure"><a href="#PeerStorage-data-structure" class="headerlink" title="PeerStorage data structure"></a>PeerStorage data structure</h3><pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> PeerStorage <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	<span class="token comment">// current region information of the peer</span>
+	region <span class="token operator">*</span>metapb<span class="token punctuation">.</span>Region
+	<span class="token comment">// current raft state of the peer</span>
+	raftState <span class="token operator">*</span>rspb<span class="token punctuation">.</span>RaftLocalState
+	<span class="token comment">// current apply state of the peer</span>
+	applyState <span class="token operator">*</span>rspb<span class="token punctuation">.</span>RaftApplyState
+
+	<span class="token comment">// current snapshot state</span>
+	snapState snap<span class="token punctuation">.</span>SnapState
+	<span class="token comment">// regionSched used to schedule task to region worker</span>
+	regionSched <span class="token keyword">chan</span><span class="token operator">&lt;-</span> worker<span class="token punctuation">.</span>Task
+	<span class="token comment">// generate snapshot tried count</span>
+	snapTriedCnt <span class="token builtin">int</span>
+	<span class="token comment">// Engine include two badger instance: Raft and Kv</span>
+	Engines <span class="token operator">*</span>engine_util<span class="token punctuation">.</span>Engines
+	<span class="token comment">// Tag used for logging</span>
+	Tag <span class="token builtin">string</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<ul>
+<li><p><code>metapb.Region</code>包含了该raft peer的region信息，包括该region的Id，每个peer的id和storeId等(StoreID说明了peer在哪台机器上)。这是因为一台机器上可能有多个raft peer, 它们都一起存储在一个kv中，所以需要在存储的时候加上regionId作为前缀。</p>
+</li>
+<li><p><code>rspb.RaftLocalState</code>和<code>raspy.RaftApplyState</code>存储了一个raft peer的状态，如下所示：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> RaftLocalState <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	HardState            <span class="token operator">*</span>eraftpb<span class="token punctuation">.</span>HardState 
+	LastIndex            <span class="token builtin">uint64</span>             
+	LastTerm             <span class="token builtin">uint64</span>                         
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">type</span> HardState <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	Term                 <span class="token builtin">uint64</span>   
+	Vote                 <span class="token builtin">uint64</span>   
+	Commit               <span class="token builtin">uint64</span>  
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">type</span> RaftApplyState <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	<span class="token comment">// Record the applied index of the state machine to make sure</span>
+	<span class="token comment">// not apply any index twice after restart.</span>
+	AppliedIndex <span class="token builtin">uint64</span> 
+	<span class="token comment">// Record the index and term of the last raft log that have been truncated. (Used in 2C)</span>
+	TruncatedState       <span class="token operator">*</span>RaftTruncatedState 
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">type</span> RaftTruncatedState <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	Index                <span class="token builtin">uint64</span>   
+	Term                 <span class="token builtin">uint64</span>   
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>其中<code>RaftLocalState.LastIndex</code>和<code>RaftLocalState.LastTerm</code>记录了该storage中最后一个log entry的index和term。<code>HardState</code>记录了Raft论文中提到的必须要持久化的部分，包括一个raft peer当前的term，votefor。raft的CommitIndex并不要求持久化，但是在state machine被持久化的情况下commitIndex和applyIndex都需要被持久化来避免重复的apply和commit。</p>
+<p><code>RaftTruncatedState</code>是关于一个raft peer在做snapshot时的状态，它记录了最后一个被截断的log entry的index和term。</p>
+</li>
+<li><p><code>snap.SnapState</code>是关于snapshot的，这部分暂时省略。</p>
+</li>
+<li><p><code>engine_util.Engines</code>封装了两个key-value store，一个用于保证raft状态的持久化，一个用于作为raft状态机。</p>
+</li>
+</ul>
+<h3 id="Persistence-Procedure"><a href="#Persistence-Procedure" class="headerlink" title="Persistence Procedure"></a>Persistence Procedure</h3><p>由于这里的engine需要存储来自不同region的raft peer的状态，所以需要在存储时对key增加额外的内容来区分这些状态是来自不同的raft peer，这些内容在存储时的格式如下：</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Key Format</th>
+<th>Value</th>
+<th>DB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>raft_log_key</td>
+<td><code>0x01 0x02 region_id 0x01 log_idx</code></td>
+<td>Entry</td>
+<td>Raft</td>
+</tr>
+<tr>
+<td>raft_state_key</td>
+<td><code>0X01 0X02 region_id 0x02</code></td>
+<td>RaftLocalState</td>
+<td>Raft</td>
+</tr>
+<tr>
+<td>apply_state_key</td>
+<td><code>0x01 0x02 region_id 0x03</code></td>
+<td>RaftApplyState</td>
+<td>kv</td>
+</tr>
+<tr>
+<td>region_state_key</td>
+<td><code>0x01 0x03 region_id 0x01</code></td>
+<td>RegionLocalState</td>
+<td>Kv</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>下面分析PeerStorage相关的代码，主要包含两个方面：1. PeerStorage的创建与初始化；2. PeerStorage对raft状态(包括log)的持久化过程。</p>
+<h4 id="Object-Creation-amp-initialization"><a href="#Object-Creation-amp-initialization" class="headerlink" title="Object Creation &amp; initialization"></a>Object Creation &amp; initialization</h4><p>为了创建一个<code>PeerStorage</code>结构，需要从<code>Engine</code>中尝试读出之前已经存在的<code>raft_local_state</code>和<code>apply_state</code>。整个初始化的过程如下：</p>
+<p><img src="/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/NewPeerStorage.png" width="100%"></p>
+<p><code>NewPeerStorage</code>会从<code>engine</code>中分别读取<code>RaftLocalState</code>和<code>RaftApplyState</code>，并将它们作为<code>PeerStorage</code>构造函数的一部分存储在<code>PeerStorage</code>对象中。因此，当raft模块调用<code>PeerStorage</code>的<code>InitState</code>函数时，它只是简单地将局部存储的<code>raftLocalState</code>和<code>ConfState</code>返回给上层。</p>
+<p><code>initRaftLocalState</code>会构造一个初始化的<code>RaftLocalState</code>, 这包含两个方面：1. 直接从raftDB中以<code>raft_state_key</code>作为key读取对应的value数据; 2. 如果raftDB中没有这样一个key, 则说明这个raft peer是第一次启动，需要做初始化。初始化时需要对raft的状态进行设置，这里设置raft的term为<code>RaftInitLogTerm</code>, 即为5，设置<code>raft</code>的log的lastIndex为<code>RaftInitLogIndex</code>, 其值也为5。然后将初始化得到的状态调用<code>PutMeta</code>进行初始化。<code>initApplyState()</code>做类似的操作，这里省略。</p>
+<p>经过上面的执行流程，我们得到了一个经过初始化的<code>PeerStorage</code>, 它从底层的engine中读取之前的raftState和applyState，或者自己初始化上述必要的内容。</p>
+<h4 id="Persistence-amp-read"><a href="#Persistence-amp-read" class="headerlink" title="Persistence &amp; read"></a>Persistence &amp; read</h4><p><code>Storage</code>的主要功能是为raft模块提供持久化的写入和读取功能。由于Lab2B要求我们实现PeerStorage的持久化功能，这里我们先解析其读取代码。然后根据读取操作的代码反推写入数据的格式和流程。</p>
+<p><code>PeerStorage</code>中与读取操作有关的函数有以下几个：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>ps <span class="token operator">*</span>PeerStorage<span class="token punctuation">)</span> <span class="token function">Entries</span><span class="token punctuation">(</span>low<span class="token punctuation">,</span> high <span class="token builtin">uint64</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span>eraftpb<span class="token punctuation">.</span>Entry<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span>；
+<span class="token keyword">func</span> <span class="token punctuation">(</span>ps <span class="token operator">*</span>PeerStorage<span class="token punctuation">)</span> <span class="token function">Term</span><span class="token punctuation">(</span>idx <span class="token builtin">uint64</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token builtin">uint64</span><span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">func</span> <span class="token punctuation">(</span>ps <span class="token operator">*</span>PeerStorage<span class="token punctuation">)</span> <span class="token function">InitialState</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>eraftpb<span class="token punctuation">.</span>HardState<span class="token punctuation">,</span> eraftpb<span class="token punctuation">.</span>ConfState<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>其中<code>InitialState</code>基本上就是直接返回<code>PeerStorage</code>中存储的raft状态，<code>ConfState</code>也是直接返回<code>Region</code>的信息，所以这部分代码没有过多需要描述的。</p>
+<h5 id="Term"><a href="#Term" class="headerlink" title="Term"></a>Term</h5><p><code>Term</code>接口对于给定的一个raft index，返回该index对应entry的term。在执行时，该函数首先需要检查给定的index是否在一个合法的范围内：即它没有超出目前已知的最大的raft index，也没有被截断（compacted)：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>ps <span class="token operator">*</span>PeerStorage<span class="token punctuation">)</span> <span class="token function">Term</span><span class="token punctuation">(</span>idx <span class="token builtin">uint64</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token builtin">uint64</span><span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// Check if this index is the last compacted index</span>
+	<span class="token keyword">if</span> idx <span class="token operator">==</span> ps<span class="token punctuation">.</span><span class="token function">truncatedIndex</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> ps<span class="token punctuation">.</span><span class="token function">truncatedTerm</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+	<span class="token punctuation">&#125;</span>
+  <span class="token comment">// check if entries contain a range [idx, idx + 1)</span>
+	<span class="token keyword">if</span> err <span class="token operator">:=</span> ps<span class="token punctuation">.</span><span class="token function">checkRange</span><span class="token punctuation">(</span>idx<span class="token punctuation">,</span> idx<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">,</span> err
+	<span class="token punctuation">&#125;</span>
+  <span class="token comment">// Otherwise the index is stored in raftDB, but an acceleration is to simply return lastTerm when </span>
+  <span class="token comment">// truncated term equals to lastTerm.</span>
+	<span class="token keyword">if</span> ps<span class="token punctuation">.</span><span class="token function">truncatedTerm</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> ps<span class="token punctuation">.</span>raftState<span class="token punctuation">.</span>LastTerm <span class="token operator">||</span> idx <span class="token operator">==</span> ps<span class="token punctuation">.</span>raftState<span class="token punctuation">.</span>LastIndex <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> ps<span class="token punctuation">.</span>raftState<span class="token punctuation">.</span>LastTerm<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+	<span class="token punctuation">&#125;</span>
+  <span class="token comment">// Otherwise, read this entry from raftDB</span>
+	<span class="token keyword">var</span> entry eraftpb<span class="token punctuation">.</span>Entry
+	<span class="token keyword">if</span> err <span class="token operator">:=</span> engine_util<span class="token punctuation">.</span><span class="token function">GetMeta</span><span class="token punctuation">(</span>ps<span class="token punctuation">.</span>Engines<span class="token punctuation">.</span>Raft<span class="token punctuation">,</span> meta<span class="token punctuation">.</span><span class="token function">RaftLogKey</span><span class="token punctuation">(</span>ps<span class="token punctuation">.</span>region<span class="token punctuation">.</span>Id<span class="token punctuation">,</span> idx<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>entry<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">,</span> err
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> entry<span class="token punctuation">.</span>Term<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// checkRange checks if specified range [low, high) is contained in this log</span>
+<span class="token keyword">func</span> <span class="token punctuation">(</span>ps <span class="token operator">*</span>PeerStorage<span class="token punctuation">)</span> <span class="token function">checkRange</span><span class="token punctuation">(</span>low<span class="token punctuation">,</span> high <span class="token builtin">uint64</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> low <span class="token operator">></span> high <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> errors<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">"low %d is greater than high %d"</span><span class="token punctuation">,</span> low<span class="token punctuation">,</span> high<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> low <span class="token operator">&lt;=</span> ps<span class="token punctuation">.</span><span class="token function">truncatedIndex</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> raft<span class="token punctuation">.</span>ErrCompacted
+	<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> high <span class="token operator">></span> ps<span class="token punctuation">.</span>raftState<span class="token punctuation">.</span>LastIndex<span class="token operator">+</span><span class="token number">1</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> errors<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">"entries' high %d is out of bound, lastIndex %d"</span><span class="token punctuation">,</span>
+			high<span class="token punctuation">,</span> ps<span class="token punctuation">.</span>raftState<span class="token punctuation">.</span>LastIndex<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> <span class="token boolean">nil</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>上面的<code>Term</code>实现分析了给定index的几种情况，然后分别返回错误码或者结果。这里在12行的位置有一个优化的方案，当给定的raft index确实在raft log范围内时，并不是一定要从raftKV中读取该entry。首先判断truncatedTerm和lastTerm是否相等，如果相等，那么这两个index之间的所有entry的term都是相同的，所以可以直接返回。</p>
+<p>这里需要说明的是，上述代码在做检查时使用的<code>lastIndex</code>, <code>lastTerm</code>等数据都是保存在<code>PeerStorage</code> object中的，所以当<code>PeerStorage</code>调用持久化相关的函数时，需要实时更新这些域。</p>
+<h5 id="Entries"><a href="#Entries" class="headerlink" title="Entries"></a>Entries</h5><p><code>Entries</code>函数会给定一个传入的index的range， 由<code>[low, high)</code>来指定，然后它将返回index在这个范围内的所有的entry。值得注意的一点是，如果这个范围是非法的（通过<code>checkRange</code>来检查），那么会直接返回错误码，而不是去返回low~lastIndex这个范围之间的entry。如果通过检查，<code>Entries</code>会在<code>raftDB</code>中构造一个迭代器，不断取出给定范围内的数据：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>ps <span class="token operator">*</span>PeerStorage<span class="token punctuation">)</span> <span class="token function">Entries</span><span class="token punctuation">(</span>low<span class="token punctuation">,</span> high <span class="token builtin">uint64</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span>eraftpb<span class="token punctuation">.</span>Entry<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token operator">...</span>
+  startKey <span class="token operator">:=</span> meta<span class="token punctuation">.</span><span class="token function">RaftLogKey</span><span class="token punctuation">(</span>ps<span class="token punctuation">.</span>region<span class="token punctuation">.</span>Id<span class="token punctuation">,</span> low<span class="token punctuation">)</span>
+	endKey <span class="token operator">:=</span> meta<span class="token punctuation">.</span><span class="token function">RaftLogKey</span><span class="token punctuation">(</span>ps<span class="token punctuation">.</span>region<span class="token punctuation">.</span>Id<span class="token punctuation">,</span> high<span class="token punctuation">)</span>
+	iter <span class="token operator">:=</span> txn<span class="token punctuation">.</span><span class="token function">NewIterator</span><span class="token punctuation">(</span>badger<span class="token punctuation">.</span>DefaultIteratorOptions<span class="token punctuation">)</span>
+	<span class="token keyword">defer</span> iter<span class="token punctuation">.</span><span class="token function">Close</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">for</span> iter<span class="token punctuation">.</span><span class="token function">Seek</span><span class="token punctuation">(</span>startKey<span class="token punctuation">)</span><span class="token punctuation">;</span> iter<span class="token punctuation">.</span><span class="token function">Valid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> iter<span class="token punctuation">.</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		item <span class="token operator">:=</span> iter<span class="token punctuation">.</span><span class="token function">Item</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+		<span class="token keyword">if</span> bytes<span class="token punctuation">.</span><span class="token function">Compare</span><span class="token punctuation">(</span>item<span class="token punctuation">.</span><span class="token function">Key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> endKey<span class="token punctuation">)</span> <span class="token operator">>=</span> <span class="token number">0</span> <span class="token punctuation">&#123;</span>
+			<span class="token keyword">break</span>
+		<span class="token punctuation">&#125;</span>
+		val<span class="token punctuation">,</span> err <span class="token operator">:=</span> item<span class="token punctuation">.</span><span class="token function">Value</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+		<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+			<span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> err
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">var</span> entry eraftpb<span class="token punctuation">.</span>Entry
+		<span class="token comment">// Unmarshal is the same as deserialize, which converts a serialized bytes into a structured log entry</span>
+		<span class="token keyword">if</span> err <span class="token operator">=</span> entry<span class="token punctuation">.</span><span class="token function">Unmarshal</span><span class="token punctuation">(</span>val<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+			<span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> err
+		<span class="token punctuation">&#125;</span>
+		<span class="token comment">// May meet gap or has been compacted.</span>
+		<span class="token keyword">if</span> entry<span class="token punctuation">.</span>Index <span class="token operator">!=</span> nextIndex <span class="token punctuation">&#123;</span>
+			<span class="token keyword">break</span>
+		<span class="token punctuation">&#125;</span>
+		nextIndex<span class="token operator">++</span>
+		buf <span class="token operator">=</span> <span class="token function">append</span><span class="token punctuation">(</span>buf<span class="token punctuation">,</span> entry<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+  <span class="token operator">...</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>由于这里<code>startKey</code>的构造方式与上面提到的key的raft log key的格式保持一致。但是值得注意的是在写入uint64这样的数据时采用的是big endian的方式，这样可以保证按字节比较的顺序（即raftDB比较key的方式）与index按照uint64的比较方式相同：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">makeRegionKey</span><span class="token punctuation">(</span>regionID <span class="token builtin">uint64</span><span class="token punctuation">,</span> suffix <span class="token builtin">byte</span><span class="token punctuation">,</span> subID <span class="token builtin">uint64</span><span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span> <span class="token punctuation">&#123;</span>
+	key <span class="token operator">:=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">,</span> <span class="token number">19</span><span class="token punctuation">)</span>
+	key<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> LocalPrefix
+	key<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">=</span> RegionRaftPrefix
+	binary<span class="token punctuation">.</span>BigEndian<span class="token punctuation">.</span><span class="token function">PutUint64</span><span class="token punctuation">(</span>key<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">:</span><span class="token punctuation">]</span><span class="token punctuation">,</span> regionID<span class="token punctuation">)</span>
+	key<span class="token punctuation">[</span><span class="token number">10</span><span class="token punctuation">]</span> <span class="token operator">=</span> suffix
+	binary<span class="token punctuation">.</span>BigEndian<span class="token punctuation">.</span><span class="token function">PutUint64</span><span class="token punctuation">(</span>key<span class="token punctuation">[</span><span class="token number">11</span><span class="token punctuation">:</span><span class="token punctuation">]</span><span class="token punctuation">,</span> subID<span class="token punctuation">)</span>
+	<span class="token keyword">return</span> key
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>而写入的value则是这个entry序列化之后的结果，通过<code>Unmarshal</code>以及<code>Marshal</code>可以将一个对象在它的类型与字节数组之间进行转换。<code>Marshal</code>可以得到写入该raftDB的value，<code>Unmarshal</code>可以从读取得到的字节数组重建该数据结构。</p>
+<hr>
+<h2 id="Summary"><a href="#Summary" class="headerlink" title="Summary"></a>Summary</h2><p>本文梳理了TinyKV中<code>raftstore</code>结构的构成以及与之相关的代码，并介绍了<code>Ticker Module</code>和<code>Storage Module</code>两部分的代码。接下来会讲述<code>Raft Module</code>的代码，重点在于<code>raftstore</code>的创建与初始化，以及运行时<code>RaftWorker</code>是如何驱动raftstore的数据结构在时钟和外部消息输入的情况下更新raft状态。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="https://Holworth.github.io"></a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://holworth.github.io/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.html">https://holworth.github.io/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://Holworth.github.io" target="_blank">Hexo</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Raft/">Raft</a><a class="post-meta__tags" href="/tags/TinyKV/">TinyKV</a><a class="post-meta__tags" href="/tags/PingCAP/">PingCAP</a></div><div class="post_share"><div class="social-share" data-image="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/post/SICP-Chapter3-The-Environment-Model-of-Evaluation.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">SICP Chapter3: The Environment Model of Evaluation</div></div></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name"></div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">16</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">19</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#TinyKV-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90"><span class="toc-number">1.</span> <span class="toc-text">TinyKV RaftStore源码解析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Overview"><span class="toc-number">1.1.</span> <span class="toc-text">Overview</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Source-Code-Overview"><span class="toc-number">1.2.</span> <span class="toc-text">Source Code Overview</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Ticker-Module"><span class="toc-number">1.3.</span> <span class="toc-text">Ticker Module</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Data-structure"><span class="toc-number">1.3.1.</span> <span class="toc-text">Data structure</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Ticker-Running"><span class="toc-number">1.3.2.</span> <span class="toc-text">Ticker Running</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Storage-Module"><span class="toc-number">1.4.</span> <span class="toc-text">Storage Module</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#PeerStorage-data-structure"><span class="toc-number">1.4.1.</span> <span class="toc-text">PeerStorage data structure</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Persistence-Procedure"><span class="toc-number">1.4.2.</span> <span class="toc-text">Persistence Procedure</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Object-Creation-amp-initialization"><span class="toc-number">1.4.2.1.</span> <span class="toc-text">Object Creation &amp; initialization</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Persistence-amp-read"><span class="toc-number">1.4.2.2.</span> <span class="toc-text">Persistence &amp; read</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#Term"><span class="toc-number">1.4.2.2.1.</span> <span class="toc-text">Term</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Entries"><span class="toc-number">1.4.2.2.2.</span> <span class="toc-text">Entries</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Summary"><span class="toc-number">1.5.</span> <span class="toc-text">Summary</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.html" title="TinyKV Course: RaftStore源码解析"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="TinyKV Course: RaftStore源码解析"/></a><div class="content"><a class="title" href="/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.html" title="TinyKV Course: RaftStore源码解析">TinyKV Course: RaftStore源码解析</a><time datetime="2022-07-12T09:51:17.000Z" title="发表于 2022-07-12 17:51:17">2022-07-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/SICP-Chapter3-The-Environment-Model-of-Evaluation.html" title="SICP Chapter3: The Environment Model of Evaluation"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="SICP Chapter3: The Environment Model of Evaluation"/></a><div class="content"><a class="title" href="/post/SICP-Chapter3-The-Environment-Model-of-Evaluation.html" title="SICP Chapter3: The Environment Model of Evaluation">SICP Chapter3: The Environment Model of Evaluation</a><time datetime="2022-07-06T03:40:18.000Z" title="发表于 2022-07-06 11:40:18">2022-07-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/SICP-Chapter3-Assignment-and-local-state.html" title="SICP Chapter3: Assignment and local state"><img src="/../images/SICPcover.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="SICP Chapter3: Assignment and local state"/></a><div class="content"><a class="title" href="/post/SICP-Chapter3-Assignment-and-local-state.html" title="SICP Chapter3: Assignment and local state">SICP Chapter3: Assignment and local state</a><time datetime="2022-07-04T10:06:13.000Z" title="发表于 2022-07-04 18:06:13">2022-07-04</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/Percolator-Google-s-transactional-system.html" title="Percolator: Google's transactional system"><img src="/../images/cover1.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Percolator: Google's transactional system"/></a><div class="content"><a class="title" href="/post/Percolator-Google-s-transactional-system.html" title="Percolator: Google's transactional system">Percolator: Google's transactional system</a><time datetime="2022-07-02T14:45:30.000Z" title="发表于 2022-07-02 22:45:30">2022-07-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0.html" title="XRP: In-Kernel Storage Functions with eBPF阅读笔记"><img src="/../images/cover2.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="XRP: In-Kernel Storage Functions with eBPF阅读笔记"/></a><div class="content"><a class="title" href="/post/XRP-In-Kernel-Storage-Functions-with-eBPF%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0.html" title="XRP: In-Kernel Storage Functions with eBPF阅读笔记">XRP: In-Kernel Storage Functions with eBPF阅读笔记</a><time datetime="2022-06-30T13:38:20.000Z" title="发表于 2022-06-30 21:38:20">2022-06-30</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2022 By null</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.min.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
