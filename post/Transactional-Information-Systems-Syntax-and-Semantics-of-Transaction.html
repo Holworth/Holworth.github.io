@@ -1,0 +1,336 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Transactional Information Systems: Syntax and Semantics of Transaction | Hexo</title><meta name="keywords" content="Transaction,Theory"><meta name="author"><meta name="copyright"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="OverviewThis article is all about the fomulation of an important concept arising in computer science, the Transaction.  Transaction is usually considered to be a set of operations that maintain the AC">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Transactional Information Systems: Syntax and Semantics of Transaction">
+<meta property="og:url" content="https://holworth.github.io/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="OverviewThis article is all about the fomulation of an important concept arising in computer science, the Transaction.  Transaction is usually considered to be a set of operations that maintain the AC">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://holworth.github.io/images/cover2.png">
+<meta property="article:published_time" content="2022-08-08T11:20:05.000Z">
+<meta property="article:modified_time" content="2022-08-09T08:19:19.723Z">
+<meta property="article:tag" content="Transaction">
+<meta property="article:tag" content="Theory">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://holworth.github.io/images/cover2.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://holworth.github.io/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"prismjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: true,
+    post: true
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Transactional Information Systems: Syntax and Semantics of Transaction',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-08-09 16:19:19'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 6.0.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">18</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">20</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('/../images/cover2.png')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Hexo</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Transactional Information Systems: Syntax and Semantics of Transaction</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-08-08T11:20:05.000Z" title="发表于 2022-08-08 19:20:05">2022-08-08</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-08-09T08:19:19.723Z" title="更新于 2022-08-09 16:19:19">2022-08-09</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">564</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>3分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="Transactional Information Systems: Syntax and Semantics of Transaction"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="Overview"><a href="#Overview" class="headerlink" title="Overview"></a>Overview</h1><p>This article is all about the fomulation of an important concept arising in computer science, the <strong>Transaction</strong>.  Transaction is usually considered to be a set of operations that maintain the ACID properties, which is an useful abtraction for programmers to write reasonable and effective code. In the past a few decades, various transactional algorithms were invented for achiving efficiency. However, it’s hard to reason about the correctness of a transactional algorithm because of the complex case where multiple transactions executed interleaved.</p>
+<p>A proper fomulation of the transaction concept is essential to the correctness of algorithm. In this article, we will build the formulation of transactions in the following order: </p>
+<ul>
+<li>The concept of <strong>Page model</strong>, and the definition of a transaction under this formulated model. </li>
+<li>The concept of <strong>history</strong> and <strong>schedules</strong>, which is used to describe what is a correct transaction execution. </li>
+<li>The <strong>syntax</strong> and <strong>semantics</strong> of transactions. </li>
+</ul>
+<hr>
+<h1 id="The-Computational-model"><a href="#The-Computational-model" class="headerlink" title="The Computational model"></a>The Computational model</h1><p>A model is the basis of formulating some concept. Similar to a mathematical theory, where the very basic axioms are presented, the computational model provides certain <strong>context</strong> and <strong>assumption</strong> when building the theory of transactions. The preceding theory of transaction are all based on such modle. There are a few steps to define a computational model: </p>
+<ul>
+<li>The data or object to manipulate and its associated <strong>elementary operations</strong>.(i.e. Not divisible)</li>
+<li>The definition of a <strong>transaction</strong>. </li>
+<li>Based on the definition of transaction, we define the concept of <strong>history</strong> and <strong>schedule</strong>, which describes the execution of multiple transactions</li>
+<li>According to the definition of history and schedule, we need to define what is a <strong>correct history or schedule</strong> in the sense of ACID senmantics. </li>
+<li>The <strong>algorithm</strong> to generate correct history or schedule.</li>
+</ul>
+<p>We will only cover the <strong>Page model</strong> in the first step and not cover the algorithm in the last step, also, in the forth step, there are various kinds of concepts about correct history and we will only cover a few. </p>
+<hr>
+<h2 id="Page-Model"><a href="#Page-Model" class="headerlink" title="Page Model"></a>Page Model</h2><h3 id="Data-objects-and-elementary-operation"><a href="#Data-objects-and-elementary-operation" class="headerlink" title="Data objects and elementary operation"></a>Data objects and elementary operation</h3><p>The page model originates from database theory. In traditional database, each operation will eventually be converted into a sequence of operations on a disk page. The page is usually of 4KB size, any read or write to it is considered to be atomic. </p>
+<p>We formally define the objects of page model as follows: </p>
+<script type="math/tex; mode=display">
+D=\{x, y, z\ldots, \}</script><p>$D$ is a finite set of data items that can be manipulates by transactions. Each data item $x$ provides two kinds of operations: $r(x)$, $w(x)$， which represent <strong>reading</strong> and <strong>writing</strong> respectively. Both $r(x)$ and $w(x)$ are atomic (elementary), that means both operations are indivisible and no “smaller” operations can be performed on these data items. </p>
+<h3 id="The-Definition-of-transactions"><a href="#The-Definition-of-transactions" class="headerlink" title="The Definition of transactions"></a>The Definition of transactions</h3><p>Based on the axioms of data objects described above, we can define transaction in a formular way. In database systems, a transaction is usually a set of operations enclosed by special tokens like “Transaction Start”, “Transaction Commit” and “Transaction Abort”. Operations in the transaction are guaranteed to be executed in ACID manner. Each operation can be pretty complex SQL statement, for example,  <code>UPDATE student.score = 5 where student.age &gt; 10</code>. </p>
+<p>However, complex operations are converted into a sequence of operations of which each is a page write or read. Thus, a intuitive definition of a transaction is as follows:</p>
+<blockquote>
+<p>A transaction $t$ is a finite sequence of actions as follows:</p>
+<script type="math/tex; mode=display">
+t = p_1p_2\ldots p_{n}, \quad n<\infty, p_{i}=r(x)\;\mbox{or}\;w(x), x\in D</script></blockquote>
+<p>Simply speaking, a transaction is a finite sequence of the atomic operations on pages. However, this definition restricts the transaction only to execute step by step, which may lose parallism. Recall that in a database transaction, operations without dependency relationships can be executed in parallel, the order only matters between operations that have depends on each other. For example, within a tranaction, a SQL statement may read records satisfying specific requirements and then only manipulate these records. This consideration introduces the transaction definition based on partial order: </p>
+<blockquote>
+<p>A transaction $t$ is a set with a partial order $&lt;$ on it. The set consists of read or write operations on data items, that is:</p>
+<script type="math/tex; mode=display">
+t = (\mbox{OP}, <),\quad \mbox{OP}=\{op\mid op=r(x)\;\mbox{or}\;op=w(x), x\in D\}</script><p>Also, if $p, q\in \mbox{OP}$ and $p$, $q$ access the same data item and at least one of them is write operation, then $p &lt; q \or q &lt; p$</p>
+</blockquote>
+<p>A <strong>partial order</strong> on $\mbox{OP}$ is a subset of the cartisian product $\mbox{OP}\times \mbox{OP}$, that satisfies reflexivity, antisemmetry and transitivity.  you can simply understand partial order as the execution order between actions, however, this relationship are not guaranteed to exist between any two actions. Two actions without this partial order relationship can be executed in parallel. </p>
+<p>The last restriction says that if two operations access the same data item (and if one of them is write) then they must be ordered. This is an obvious constraints: if two operations happens “simoutaneously” on one data item and one is write, the final status of the data item will remain ambiguous. </p>
+<p>Further more, the definiton of sequence of actions can be viewed as a special case of partial order definition, that is, the partial order is a <strong>total order</strong>, thus we can list all contained actions as a sequence.</p>
+<h3 id="Semantics-of-transactions"><a href="#Semantics-of-transactions" class="headerlink" title="Semantics of transactions"></a>Semantics of transactions</h3><p>We have give a strict definition of transaction in the context of page model operations.  However, we have not yet clarify what each step is doing. We will describe the semantics of each action. </p>
+<p>First consider the sequel case, where transaction is defined as a finite sequence of actions. In this definition, have:</p>
+<blockquote>
+<p>For read operation $p_{j} = r(x)$, its semantic is to read the contents of the object into a local variable: </p>
+<script type="math/tex; mode=display">
+v_j := x</script><p>For write operation $p_{j}=w(x)$, its semantic is to first calculate a write value, then write the value into data item $x$. The way to calculate this write value can be describe as a multi-variable function of the value it has previously read:</p>
+<script type="math/tex; mode=display">
+x := f(v_{j_1}, v_{j_2},\ldots, v_{j_r})\\
+\{j_1, j_2,\ldots, j_r\}=\{j_k\mid p_{j_k} < p_{j} \and p_{j_k} \mbox{is read} \}</script></blockquote>
+<p>For definition based on partial order, the read operation has the same semantics, however, for write operations, the read happen before a specific write depends on the defined partial order relationship. When define a transaction, the user must specify the partial order clearly. </p>
+<hr>
+<h2 id="Transaction-Execution"><a href="#Transaction-Execution" class="headerlink" title="Transaction Execution"></a>Transaction Execution</h2><p>The transaction we defined above is a static concept, it simply presents all operations within a transaction and specify their relationship between each actions. The relation is defined by the user, or the one that creates this transaction. However, to execute transactions, especially concurrent-executing multiple transactions, is a more dynamic and complex process. </p>
+<p>There are a few challenges for concurrent transactions execution: </p>
+<ul>
+<li>The <strong>correctness</strong>. Each transaction execution must satisfy ACID property. This is a problem of scheduling: given actions of all transactions, how can you arrange them so that the ACID is satisfied. </li>
+<li><strong>Online</strong> scheduling.  In practice, the system can not wait all transactions arrives, do arrangement on them and then execute them in batch. Instead, the system has to make real-time decision on which transaction should execute, with new incoming transactions.</li>
+<li><strong>Efficiency</strong>, list all possible arrangements of a batch of transactions could be a naive solution to guarantee correctness, however, it’s inpractical for real world systems. </li>
+</ul>
+<h2 id="Anomalies-for-Transaction-Execution"><a href="#Anomalies-for-Transaction-Execution" class="headerlink" title="Anomalies for Transaction Execution"></a>Anomalies for Transaction Execution</h2><p>There are a bunch of anomalies when concurrent transactions execute. We list a few archetypical anamalies here, to better clarify the possible issues of concurrent execution and the importance of ACID properties. </p>
+<h3 id="Lost-update"><a href="#Lost-update" class="headerlink" title="Lost update"></a>Lost update</h3><p>The lost update problems happens when a transaction’s execution results overwrite another’s results, here is an example:</p>
+<p><img src="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction/lostupdate.png" width="70%"></p>
+<p>Two transactions wants to update the variable x. However, the results executed by the first transaction is overwritten by then second transaction, causing the final state of the variable to be 120. However, in the ACID view, if two transactions execute successfully, their update should make effect on the variable. That is, the final state of $x$ should be 150. </p>
+<h3 id="In-Consistent-Read"><a href="#In-Consistent-Read" class="headerlink" title="In-Consistent Read"></a>In-Consistent Read</h3><p><img src="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction/inconsistentread.png" width="70%"></p>
+<p>In this example, the transaction t2 aims to maintain an invariable: x+y. That is, before or after the transaction t2 executes, the value $x+y$ should remain constant. Here the value $x+y$ means the value read by another transaction. </p>
+<p>However, in the above execution sequence, the transaction t1 would read modified value of $x$ and unmodified value of $y$, causing this invariant false. </p>
+<h3 id="Dirty-Read-Read-uncommitted"><a href="#Dirty-Read-Read-uncommitted" class="headerlink" title="Dirty-Read / Read uncommitted"></a>Dirty-Read / Read uncommitted</h3><p><img src="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction/dirtyread.png" width="70%"></p>
+<p>The last anomaly happens when a transaction reads <strong>uncommitted data</strong> of another transaction. More seriously, tranction $t_2$ reads $t_1$’s uncommitted value $x$ and do some modification <u>based on that read</u>. However, the transaction $t1$ shuts down while the effect of $t2$ based on $t1$ still remains, which is invalid. </p>
+<hr>
+<h2 id="The-concept-about-history-and-schedule"><a href="#The-concept-about-history-and-schedule" class="headerlink" title="The concept about history and schedule"></a>The concept about history and schedule</h2><p>The described anomalies above, reveal challenges to a transactional processing system. The key to the avoid these anomalies is to provide algorithms for generating correct execution schedules. Here we introduce the concept about <strong>history</strong>, which describes the execution of multiple transactions, and the concept of <strong>schedule</strong>, which is a prefix of history, that indicates there are some undecided transactions.</p>
+<h3 id="History"><a href="#History" class="headerlink" title="History"></a>History</h3><p>Simply speaking, a <strong>history</strong> is an execution arragements of transactions that maintain the dependency relationship of contained transactions. Here is the formal definition:</p>
+<blockquote>
+<p>Let $T = \{t_{1},\ldots,t_{n} \}$ be a (ﬁnite) set of transactions, where each $t_{i} \in T$ has the form$ t_i = (\mbox{op}_{i}, &lt;_{i})$, with $\mbox{op}_{i}$ denoting the set of operations of $t_{i}$ and $&lt;_{i}$ denoting their ordering, $1 \leq i\leq n$.</p>
+<ol>
+<li>A history for $ T $ is a pair $s = (\mbox{op}(s), &lt;_{s} )$ such that:<ul>
+<li>$\mbox{op}(s)\subseteq \bigcup_{i=1}^{n}\mbox{op}_{i}\cup\bigcup_{i=1}^{n}\{a_i, c_i\}$ and $\bigcup_{i=1}^{n}\mbox{op}_{i}\subseteq \mbox{op}(s)$ ,i.e., $s$ consists of the <u>union of the operations</u> from the given transactions plus a termination operation, which is either a $c_i$ (commit) or an $a_i$ (abort), for each $t_i \in T$;</li>
+<li>$(\forall i, 1\leq i\leq n): c_i\in \mbox{op}(s) \Leftrightarrow a_i\notin \mbox{op}(s)$, i.e., for each transaction, there is <u>either a commit or an abort</u> in $s$, but not both;</li>
+<li>$\bigcup_{i=1}^{n}<_{i}\subseteq <_{s}$ , i.e., all <u>transaction orders are contained&lt;/u&gt; in the partial order given by $s$;</_{i}\subseteq></li>
+<li>$(\forall i, 1 \leq i \leq n)(\forall p \in \mbox{op}_i): p <_{s} a_i\mbox{ or } p <_{s} c _i$, i.e., the <u>Commit or Abort operation always appears as the last step&lt;/u&gt; of a transaction</_{s}></li>
+<li>Every pair of operations $p, q \in \mbox{op}(s)$ from distinct transactions that access the same data item and have at least one write operation among them is ordered in $s$ in such a way that either $p &lt;_{s} q$ or $q &lt;_{s} p$.</li>
+</ul>
+</li>
+</ol>
+</blockquote>
+<p>As we can see, this definition of <em>history</em> is intuitive: operations of all transactions are contained and their individual order are maintained. An additional <em>commit</em> or <em>abort</em> flag is added to the tail of each transaction to mark the end of it. </p>
+<p>History is used to describe a complete execution since it contains all operation actions. There are some time we can’t know all actions of all transactions, thus the execution track we give is incomplete, this is called <strong>schedule</strong>, which is the topic for next section.</p>
+<p>Here we have a special case of history, in which all transactions are ordered in some sense:</p>
+<blockquote>
+<p><strong>Serial History</strong>: Two transactions $t_i$ and $t_j$ are called ordered in a history $s$, if all operations in $t_i$ are before $t_j$, or vice versa. If any two transactions in history $s$ are ordered, then $s$ is called a serial history.</p>
+</blockquote>
+<h4 id="Examples-of-history"><a href="#Examples-of-history" class="headerlink" title="Examples of history"></a>Examples of history</h4><p>Here we give an example about history. There are three transactions $t_1, t_2, t_3$, their operations are indiced with their individual transactio id. The orders of operations in each transaction are as follows:</p>
+<p><img src="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction/history_example1_txns.png" width="40%"></p>
+<p>We can give a history of these three transaction execution as follows:</p>
+<p><strong>Total order case</strong></p>
+<script type="math/tex; mode=display">
+r_1(x)r_2(x)r_1(z)w_1(x)w_2(y)r_3(z)w_3(y)c_1c_2w_3(z)c_3</script><p>This is a history written in total order (which is a special case of partial order). We can check that the sequence contains all operations of all transactions and each transaction is ended with a commit flag. The order within each transaction is maintained, and actions from different transactions that accesses the same data item are ordered as well. </p>
+<p><strong>Partial order case</strong></p>
+<p><img src="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction/history_example1_history2.png" width="40%"></p>
+<p>The above picture shows a history in partial order. Except for the existed partial order of each transaction, addtional order is added between transactions when they access the same data item. e.g. $w_2(y)$ and $w_3(y)$, $r_1(z)$ and $w_3(z)$. The additional commit flag is added at the tail. </p>
+<p>Though not necessary, we still explicitly state the relationship between the total order case and partial order case. A partial order can be viewed as a <strong>DAG (Directed Acylic Graph)</strong>. And the total order can be constructued using tological sort algorithm.</p>
+<hr>
+<h3 id="Schedule"><a href="#Schedule" class="headerlink" title="Schedule"></a>Schedule</h3><p>A history is constructed when all actions of all transactions are known to the system. However, this is not a necessarily true assumption, especially for an online transaction scheduler. The system may constantly see incoming transactions and has to decide on which transaction to be executed. That is, we need the system to generate partial execution history.</p>
+<p>We introduce the concept about <strong>schedule</strong>. It’s just a simple definition: </p>
+<blockquote>
+<p><strong>A schedule is a preﬁx of a history.</strong></p>
+</blockquote>
+<p>For a total case, i.e, the history a sequence of actions together will commit or abort flag, the “prefix” is well defined. However, for partial order case where a history is itself a DAG, the “prefix” is not that clear, we give the formal definition of “prefix” in the sense of partial order: </p>
+<blockquote>
+<p>Let $s = (\mbox{op}(s), &lt;_{s})$ be a history, i.e, a partial order set. Then a prefix of $s$ is a partial order set $s’=(\mbox{op}(s’), &lt;_{s’})$ satisfies:</p>
+<ul>
+<li>$\mbox{op}_{s’}\subseteq \mbox{op}_{s}$</li>
+<li>$&lt;_{s’}\subseteq &lt;_{s}$</li>
+<li>$(\forall p\in \mbox{op}(s))(\forall q\in \mbox{op}(s’)): p&lt;_{s}q\Rightarrow p\in \mbox{op}_{s’}$</li>
+<li>$(\forall p,q\in \mbox{op}(s’)): p&lt;_{s}q\Rightarrow p&lt;_{s’}q$</li>
+</ul>
+</blockquote>
+<p>The prefix of a history based on partial order describes a few paths to an end point. The third axioms says that if an element in the prefix, then any predecessor must also be in the prefix. The second axiom requires the prefix has no additional order compared with original set. The forth axiom requires the order is maintained in the prefix. </p>
+<h4 id="Examples-of-schedule"><a href="#Examples-of-schedule" class="headerlink" title="Examples of schedule"></a>Examples of schedule</h4><p><strong>Total order case</strong></p>
+<p>We still uses the examples used above, consider the following history:</p>
+<script type="math/tex; mode=display">
+r_1(x)r_2(x)r_1(z)w_1(x)w_2(y)r_3(z)w_3(y)c_1c_2w_3(z)c_3</script><p>Then the following are its prefix, thus schedules: </p>
+<script type="math/tex; mode=display">
+\begin{aligned}
+&r_1 (x)r_2 (x)r_1 (z)w_1 (x)w_2 (y)r_3 (z)w_3 (y),\\
+
+&r_1 (x)r_2 (x)r_1 (z)w_1 (x)w_2 (y),\\
+
+&r_1 (x)r_2 (x)r_1 (z)
+\end{aligned}</script><p><strong>Partial order case</strong></p>
+<p>Given the following partial order history: </p>
+<p><img src="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction/history_example1_history2.png" width="40%"></p>
+<p>We can construct a prefix of it: </p>
+<p><img src="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction/partial_order_prefix.png" width="40%"></p>
+<h4 id="More-terminologies"><a href="#More-terminologies" class="headerlink" title="More terminologies"></a>More terminologies</h4><p>A schedule is an incomplete part of history, however, we can still get some partial information of this construct, here are some notations about a schedule: </p>
+<blockquote>
+<ol>
+<li><p>$\mbox{trans}(s) := \{ t_i| s \mbox{ contains steps from } t_i\}$ </p>
+<p>$\mbox{trans}(s)$ denotes the set of all transactions occurring partially or completely in $s$.</p>
+</li>
+<li><p>$\mbox{commit}(s) := \{ t_i \in \mbox{trans}(s) \mid c_i \in s \}$</p>
+<p>$\mbox{commit}(s) $denotes the set of all transactions that are committed in $s$.</p>
+</li>
+<li><p>$\mbox{abort}(s) := \{ t_i \in \mbox{trans}(s) \mid a_i \in s \}$</p>
+<p>$\mbox{abort}(s)$ denotes the set of all transactions that are aborted in $s$.</p>
+</li>
+<li><p>$\mbox{active}(s) := \mbox{trans}(s) − (\mbox{commit}(s) \cup \mbox{abort}(s))$ </p>
+<p>$\mbox{active}(s)$ denotes the set of all transactions that are still active in $s$ (i.e., for which termination through commit or abort is still open).</p>
+</li>
+</ol>
+</blockquote>
+<h1 id="Summary"><a href="#Summary" class="headerlink" title="Summary"></a>Summary</h1><h1 id="reference"><a href="#reference" class="headerlink" title="reference"></a>reference</h1></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="https://Holworth.github.io"></a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://holworth.github.io/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction.html">https://holworth.github.io/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://Holworth.github.io" target="_blank">Hexo</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Transaction/">Transaction</a><a class="post-meta__tags" href="/tags/Theory/">Theory</a></div><div class="post_share"><div class="social-share" data-image="/../images/cover2.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/post/TinyKV-Course-RaftStore%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B.html"><img class="next-cover" src="/../images/cover3.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">TinyKV Course: RaftStore执行流程</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/post/Percolator-Google-s-transactional-system.html" title="Percolator: Google&#39;s transactional system"><img class="cover" src="/../images/cover1.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-07-02</div><div class="title">Percolator: Google&#39;s transactional system</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name"></div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">18</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">20</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Overview"><span class="toc-number">1.</span> <span class="toc-text">Overview</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#The-Computational-model"><span class="toc-number">2.</span> <span class="toc-text">The Computational model</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Page-Model"><span class="toc-number">2.1.</span> <span class="toc-text">Page Model</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Data-objects-and-elementary-operation"><span class="toc-number">2.1.1.</span> <span class="toc-text">Data objects and elementary operation</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#The-Definition-of-transactions"><span class="toc-number">2.1.2.</span> <span class="toc-text">The Definition of transactions</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Semantics-of-transactions"><span class="toc-number">2.1.3.</span> <span class="toc-text">Semantics of transactions</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Transaction-Execution"><span class="toc-number">2.2.</span> <span class="toc-text">Transaction Execution</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Anomalies-for-Transaction-Execution"><span class="toc-number">2.3.</span> <span class="toc-text">Anomalies for Transaction Execution</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Lost-update"><span class="toc-number">2.3.1.</span> <span class="toc-text">Lost update</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#In-Consistent-Read"><span class="toc-number">2.3.2.</span> <span class="toc-text">In-Consistent Read</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Dirty-Read-Read-uncommitted"><span class="toc-number">2.3.3.</span> <span class="toc-text">Dirty-Read &#x2F; Read uncommitted</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#The-concept-about-history-and-schedule"><span class="toc-number">2.4.</span> <span class="toc-text">The concept about history and schedule</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#History"><span class="toc-number">2.4.1.</span> <span class="toc-text">History</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Examples-of-history"><span class="toc-number">2.4.1.1.</span> <span class="toc-text">Examples of history</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Schedule"><span class="toc-number">2.4.2.</span> <span class="toc-text">Schedule</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Examples-of-schedule"><span class="toc-number">2.4.2.1.</span> <span class="toc-text">Examples of schedule</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#More-terminologies"><span class="toc-number">2.4.2.2.</span> <span class="toc-text">More terminologies</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Summary"><span class="toc-number">3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#reference"><span class="toc-number">4.</span> <span class="toc-text">reference</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction.html" title="Transactional Information Systems: Syntax and Semantics of Transaction"><img src="/../images/cover2.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Transactional Information Systems: Syntax and Semantics of Transaction"/></a><div class="content"><a class="title" href="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction.html" title="Transactional Information Systems: Syntax and Semantics of Transaction">Transactional Information Systems: Syntax and Semantics of Transaction</a><time datetime="2022-08-08T11:20:05.000Z" title="发表于 2022-08-08 19:20:05">2022-08-08</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/TinyKV-Course-RaftStore%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B.html" title="TinyKV Course: RaftStore执行流程"><img src="/../images/cover3.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="TinyKV Course: RaftStore执行流程"/></a><div class="content"><a class="title" href="/post/TinyKV-Course-RaftStore%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B.html" title="TinyKV Course: RaftStore执行流程">TinyKV Course: RaftStore执行流程</a><time datetime="2022-07-18T12:21:04.000Z" title="发表于 2022-07-18 20:21:04">2022-07-18</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.html" title="TinyKV Course: RaftStore源码解析"><img src="/../images/cover4.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="TinyKV Course: RaftStore源码解析"/></a><div class="content"><a class="title" href="/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.html" title="TinyKV Course: RaftStore源码解析">TinyKV Course: RaftStore源码解析</a><time datetime="2022-07-12T09:51:17.000Z" title="发表于 2022-07-12 17:51:17">2022-07-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/SICP-Chapter3-The-Environment-Model-of-Evaluation.html" title="SICP Chapter3: The Environment Model of Evaluation"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="SICP Chapter3: The Environment Model of Evaluation"/></a><div class="content"><a class="title" href="/post/SICP-Chapter3-The-Environment-Model-of-Evaluation.html" title="SICP Chapter3: The Environment Model of Evaluation">SICP Chapter3: The Environment Model of Evaluation</a><time datetime="2022-07-06T03:40:18.000Z" title="发表于 2022-07-06 11:40:18">2022-07-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/SICP-Chapter3-Assignment-and-local-state.html" title="SICP Chapter3: Assignment and local state"><img src="/../images/SICPcover.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="SICP Chapter3: Assignment and local state"/></a><div class="content"><a class="title" href="/post/SICP-Chapter3-Assignment-and-local-state.html" title="SICP Chapter3: Assignment and local state">SICP Chapter3: Assignment and local state</a><time datetime="2022-07-04T10:06:13.000Z" title="发表于 2022-07-04 18:06:13">2022-07-04</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2022 By null</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.min.js"></script><div class="js-pjax"><script>if (!window.MathJax) {
+  window.MathJax = {
+    tex: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"]],
+      tags: 'ams'
+    },
+    chtml: {
+      scale: 1.2
+    },
+    options: {
+      renderActions: {
+        findScript: [10, doc => {
+          for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+            const display = !!node.type.match(/; *mode=display/)
+            const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+            const text = document.createTextNode('')
+            node.parentNode.replaceChild(text, node)
+            math.start = {node: text, delim: '', n: 0}
+            math.end = {node: text, delim: '', n: 0}
+            doc.math.push(math)
+          }
+        }, ''],
+        insertScript: [200, () => {
+          document.querySelectorAll('mjx-container:not\([display]\)').forEach(node => {
+            const target = node.parentNode
+            if (target.nodeName.toLowerCase() === 'li') {
+              target.parentNode.classList.add('has-jax')
+            } else {
+              target.classList.add('has-jax')
+            }
+          });
+        }, '', false]
+      }
+    }
+  }
+  
+  const script = document.createElement('script')
+  script.src = 'https://cdn.jsdelivr.net/npm/mathjax/es5/tex-mml-chtml.min.js'
+  script.id = 'MathJax-script'
+  script.async = true
+  document.head.appendChild(script)
+} else {
+  MathJax.startup.document.state(0)
+  MathJax.texReset()
+  MathJax.typeset()
+}</script></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
