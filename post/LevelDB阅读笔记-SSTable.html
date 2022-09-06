@@ -1,0 +1,664 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>LevelDB阅读笔记-SSTable | Hexo</title><meta name="keywords" content="LevelDB,C++,KV"><meta name="author"><meta name="copyright"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="为了保证数据的持久化, LevelDB最终会将memtable中的数据写入到底层文件中。写入的文件被称为SSTable文件，即Sorted String Table文件。这类文件包含了多个经过序列化的key-value条目，以及index block，filter block等元数据用于快速定位指定的键值对。SSTable文件需要同时支持顺序写入以及随即读写的能力。本文将介绍LevelDB中的SS">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LevelDB阅读笔记-SSTable">
+<meta property="og:url" content="https://holworth.github.io/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="为了保证数据的持久化, LevelDB最终会将memtable中的数据写入到底层文件中。写入的文件被称为SSTable文件，即Sorted String Table文件。这类文件包含了多个经过序列化的key-value条目，以及index block，filter block等元数据用于快速定位指定的键值对。SSTable文件需要同时支持顺序写入以及随即读写的能力。本文将介绍LevelDB中的SS">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://holworth.github.io/images/LevelDB.png">
+<meta property="article:published_time" content="2022-08-21T13:44:04.000Z">
+<meta property="article:modified_time" content="2022-09-06T11:57:40.638Z">
+<meta property="article:tag" content="LevelDB">
+<meta property="article:tag" content="C++">
+<meta property="article:tag" content="KV">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://holworth.github.io/images/LevelDB.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://holworth.github.io/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"prismjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: true,
+    post: true
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'LevelDB阅读笔记-SSTable',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-09-06 19:57:40'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 6.0.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">19</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">20</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('/../images/LevelDB.png')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Hexo</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">LevelDB阅读笔记-SSTable</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-08-21T13:44:04.000Z" title="发表于 2022-08-21 21:44:04">2022-08-21</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-09-06T11:57:40.638Z" title="更新于 2022-09-06 19:57:40">2022-09-06</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Coding/">Coding</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Coding/Database/">Database</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">6.1k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>23分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="LevelDB阅读笔记-SSTable"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>为了保证数据的持久化, LevelDB最终会将memtable中的数据写入到底层文件中。写入的文件被称为SSTable文件，即Sorted String Table文件。这类文件包含了多个经过序列化的key-value条目，以及index block，filter block等元数据用于快速定位指定的键值对。SSTable文件需要同时支持顺序写入以及随即读写的能力。本文将介绍LevelDB中的SST文件，包括文件的格式以及文件是怎样被创建和使用的。</p>
+<h1 id="SSTable-File-Format"><a href="#SSTable-File-Format" class="headerlink" title="SSTable File Format"></a>SSTable File Format</h1><p>关于LevelDB的SSTable文件的数据布局，网上有很多介绍的文章了，这里用一幅示意图来解释：</p>
+<p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable/LevelDBSSTFormat.svg" width="80%"></p>
+<p>整个SSTable文件被划分为了多个block，而不同的Block有不同的作用。主要的Block类型如下：</p>
+<ul>
+<li><strong>Data Block</strong>: 用于存储多条经过序列化的key-value数据。</li>
+<li><strong>Filter Block:</strong> 用于存储该SSTable中所有key-value数据的过滤器，可以快速判断一个key是否在该SST中</li>
+<li><strong>MetaIndex Block:</strong> 存储了Filter Block的位置，是一个BlockHandlel类型，即保存了一个Block在文件中的offset以及该block的size。用于唯一地确定一个block的数据范围</li>
+<li><strong>Index Block：</strong>存储了每个data block的索引，这里的索引是指一个separate key到该data block的block handle的映射。这里的separate key可以简单认为是该data block中最大的key（但不是），Index Block用于区分每个data block中存储的key的范围。</li>
+<li><strong>Footer：</strong>存储了该SSTable文件的索引信息。包括到MetaIndexBlock的索引 (从而能快速找到filter block)；到IndexBlock的索引。</li>
+</ul>
+<p>一个SST可以分别用于读写：</p>
+<ul>
+<li>在写操作时，SSTable由一个TableBuilder创建并顺序写入。通过向TableBuilder调用Add操作可以向该SST文件中加入key-value数据，TableBuilder在内部维护一个BlockBuilder，不断在文件末尾写入DataBlock。在TableBuilder的调用者调用Finish时，整个TableBuilder完成对Table的构造，将meta block顺序写入到文件末尾，并加上Footer表示一个SSTable文件写入完成。</li>
+<li>在读操作时，TableReader会创建在一个RandomAccessFile上，从而完成对整个SST文件的随机读取。通过IndexBlock，TableReader能够定位到每个key所在的DataBlock的位置，然后在对应的DataBlock中读取key-value数据。</li>
+</ul>
+<h1 id="SSTable-File的创建与写入"><a href="#SSTable-File的创建与写入" class="headerlink" title="SSTable File的创建与写入"></a>SSTable File的创建与写入</h1><h2 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h2><p>SSTable的写入是由一个被称为<code>TableBuilder</code>的结构来管理的，涉及到的相关代码的组织如下所示：</p>
+<p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable/LevelDBTableBuilderUML.svg"></p>
+<p>TableBuilder将所有实际的成员放在一个<code>Rep</code>结构中，但是实际上也并不知道为什么要这样做，Rep这个名词在很多地方都看到过，但我也不太清楚它在编程语言中具体表示什么含义。</p>
+<p><code>TableBuilder</code>中包含了三个主要结构：</p>
+<ul>
+<li><code>BlockBuilder data_block</code> : 接收上层传入的key value数据，构建当前的data block.</li>
+<li><code>BlockBulider index_block</code> :  为每一个data block构建一个对应的Index条目</li>
+<li><code>FilterBlockBuilder filter_builder</code>： 为每个data block构建一个filter block</li>
+</ul>
+<p>可以看到，<code>TableBuilder</code>依赖于<code>BlockBuilder</code>来构建具体的data block以及Index block，因此<code>BlockBuilder</code>是一个非常基本的数据结构。</p>
+<h3 id="BlockBuilder"><a href="#BlockBuilder" class="headerlink" title="BlockBuilder"></a>BlockBuilder</h3><p>首先需要说明，一个BlockBuilder并不会向文件里面写入实际的数据，它仅仅起到序列化的作用。当调用者通过<code>Add(key, value)</code>向一个Block中添加数据时，BlockBuilder仅仅只是将键值数据序列化后（包括encoding在内）添加到一个内存buffer的末尾 (<code>std::string buffer_</code>)。当调用者调用<code>Finish()</code>时，BlockBuilder会返回当前经过序列化的所有数据，由调用者来决定如何使用这些数据，即写入实际的文件等等。</p>
+<h4 id="DataBlock数据排布"><a href="#DataBlock数据排布" class="headerlink" title="DataBlock数据排布"></a>DataBlock数据排布</h4><p>关于一个Block的数据排布，文章最前面的图已经有所描述了，这里重点看看DataBlock的数据排布：</p>
+<p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable/LevelDBDataBlockFormat.png" width="60%"></p>
+<h5 id="Restart-Group"><a href="#Restart-Group" class="headerlink" title="Restart Group"></a>Restart Group</h5><p>一个DataBlock的最前端是多个Restart Group， 每个RestartGroup内部是多个key-value entry条目。采用Restart Group的原因是SSTable采用了delta encoding的方式，即存储每个key-value entry时，对于key只存储key与它的前一个key不同的部分,即non-shared key (这也是为什么<code>BlockBuilder</code>需要保存一个<code>last_key_</code>的原因)。但是这种encoding的链条不能太长，如果太长会导致读取时困难，因为需要从第一个key开始叠加解码后面的key。因此每当key的数量达到一定阈值时就开启下一个restart group。</p>
+<h5 id="Restart-Group-offset-array"><a href="#Restart-Group-offset-array" class="headerlink" title="Restart Group offset array"></a>Restart Group offset array</h5><p><code>BlockBuilder</code>会记录每个Restart Group的偏移。注意这个偏移是针对整个Block内部的偏移，而不是整个文件的偏移。当调用者调用BlockBuilder的<code>Finish()</code>时，BlockBuilder会将Restart Group offset array添加到buffer的末尾，并且写下Restart Group的数目，然后返回。</p>
+<h5 id="DataBlockTrailer"><a href="#DataBlockTrailer" class="headerlink" title="DataBlockTrailer"></a>DataBlockTrailer</h5><p><code>DataBlockTrailer</code>是一个DataBlock最末尾的信息，包含了一个<code>CompressionType</code>来说明该DataBlock在做压缩时使用的压缩类型，一个4B的CRC校验码来计算整个data block的校验信息。严格来说DataBlockTrailer并不算是DataBlock的一部分，在计算一个DataBlock的BlockHandle时并没有将这5B的size计算到BlockHandle中。</p>
+<h4 id="调用接口"><a href="#调用接口" class="headerlink" title="调用接口"></a>调用接口</h4><h5 id="void-Add-const-Slice-amp-key-const-Slice-amp-value"><a href="#void-Add-const-Slice-amp-key-const-Slice-amp-value" class="headerlink" title="void Add(const Slice&amp; key, const Slice&amp; value)"></a>void Add(const Slice&amp; key, const Slice&amp; value)</h5><p>该接口将一对key-value数据添加到buffer中, 首先计算当前插入key与last_key_之间的共同部分，并判断是否需要开启新的restart group。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">if</span> <span class="token punctuation">(</span>counter_ <span class="token operator">&lt;</span> options_<span class="token operator">-></span>block_restart_interval<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// See how much sharing to do with previous string</span>
+  <span class="token keyword">const</span> size_t min_length <span class="token operator">=</span> std<span class="token double-colon punctuation">::</span><span class="token function">min</span><span class="token punctuation">(</span>last_key_piece<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> key<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>shared <span class="token operator">&lt;</span> min_length<span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> <span class="token punctuation">(</span>last_key_piece<span class="token punctuation">[</span>shared<span class="token punctuation">]</span> <span class="token operator">==</span> key<span class="token punctuation">[</span>shared<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    shared<span class="token operator">++</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// Restart compression</span>
+  restarts_<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>buffer_<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  counter_ <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>完成后，将当前key-value数据append到buffer中：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">const</span> size_t non_shared <span class="token operator">=</span> key<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> shared<span class="token punctuation">;</span>
+
+<span class="token comment">// Add "&lt;shared>&lt;non_shared>&lt;value_size>" to buffer_</span>
+<span class="token function">PutVarint32</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>buffer_<span class="token punctuation">,</span> shared<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">PutVarint32</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>buffer_<span class="token punctuation">,</span> non_shared<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">PutVarint32</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>buffer_<span class="token punctuation">,</span> value<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Add string delta to buffer_ followed by value</span>
+buffer_<span class="token punctuation">.</span><span class="token function">append</span><span class="token punctuation">(</span>key<span class="token punctuation">.</span><span class="token function">data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> shared<span class="token punctuation">,</span> non_shared<span class="token punctuation">)</span><span class="token punctuation">;</span>
+buffer_<span class="token punctuation">.</span><span class="token function">append</span><span class="token punctuation">(</span>value<span class="token punctuation">.</span><span class="token function">data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> value<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>最后更新last_key_</p>
+<h5 id="Slice-Finish"><a href="#Slice-Finish" class="headerlink" title="Slice Finish()"></a>Slice Finish()</h5><p>Finish()接口将当前BlockBuilder保存的序列化数据返回，同时在整个buffer的末尾添加上restart offset array。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Slice <span class="token class-name">BlockBuilder</span><span class="token double-colon punctuation">::</span><span class="token function">Finish</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// Append restart array</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span>size_t i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> restarts_<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token function">PutFixed32</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>buffer_<span class="token punctuation">,</span> restarts_<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token function">PutFixed32</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>buffer_<span class="token punctuation">,</span> restarts_<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  finished_ <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token function">Slice</span><span class="token punctuation">(</span>buffer_<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>一个Block何时调用<code>Finish()</code>来返回数据是由BlockBuilder的上层决定的，最基本的判断方法是判断Block的大小是否超过一定阈值。在TableBuilder中使用BlockBuilder时，对于DataBlock是采用这种方法。对于IndexBlock则是只有在TableBuilder调用自己的Finish时才对对应的Index BlockBuilder调用<code>Finish()</code>, 这样可以保证一个SST文件中的Index Block只有一个。</p>
+<h5 id="void-Reset"><a href="#void-Reset" class="headerlink" title="void Reset()"></a>void Reset()</h5><p>Reset调用将整个BlockBuilder的状态重置到最初始的情况。</p>
+<pre class="line-numbers language-none"><code class="language-none">void BlockBuilder::Reset() &#123;
+  buffer_.clear();
+  restarts_.clear();
+  restarts_.push_back(0);  &#x2F;&#x2F; First restart point is at offset 0
+  counter_ &#x3D; 0;
+  finished_ &#x3D; false;
+  last_key_.clear();
+&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>值得说明的是，由于<code>Finish</code>调用需要在Block的末尾添加所有Restart Group的offset，所以必须在确定所有<code>Add</code>操作都完成之后才能调用<code>Finish()</code>。而在Add中也有一个断言：<code>assert(finished_ == false)</code>。如果需要将一个BlockBuilder重复使用于构建多个DataBlock，则需要在每次调用Finish()之后调用<code>Reset()</code>。</p>
+<hr>
+<h2 id="调用流程与执行接口"><a href="#调用流程与执行接口" class="headerlink" title="调用流程与执行接口"></a>调用流程与执行接口</h2><h3 id="void-Add-const-Slice-amp-key-const-Slice-amp-value-1"><a href="#void-Add-const-Slice-amp-key-const-Slice-amp-value-1" class="headerlink" title="void Add(const Slice&amp; key, const Slice&amp; value)"></a>void Add(const Slice&amp; key, const Slice&amp; value)</h3><p>整个Add操作的流程可以用下面的示意图来表示：</p>
+<p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable/LevelDBTableAdd.png" width="70%"></p>
+<p>肩头上的数字1,2,3,4分别表示了该步操作的序号。箭头的末尾表示该操作调用的对象，箭头上的函数名称表示此次调用使用到的调用对象的接口。</p>
+<p>对于TableBuilder::Add而言，该函数需要将一个key-value数据加入到整个Table中，但由于Table是由不同的Block组成的，所以实际上最后会落到对BlockBuilder的Add操作的调用。整个过程可以分为4步：</p>
+<ol>
+<li><p><strong>检查是否需要在Index Block中添加一个Index entry</strong>。这是因为不断向table中添加Key-value数据的过程会触发DataBlock的刷盘，一次刷盘就会诞生一个新的DataBlock，必须将上一个刷盘的DataBlock添加到IndexBlock中。这部分的代码如下所示：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token class-name">TableBuilder</span><span class="token double-colon punctuation">::</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> key<span class="token punctuation">,</span> <span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> value<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>  
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+	<span class="token keyword">if</span> <span class="token punctuation">(</span>r<span class="token operator">-></span>pending_index_entry<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token function">assert</span><span class="token punctuation">(</span>r<span class="token operator">-></span>data_block<span class="token punctuation">.</span><span class="token function">empty</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    r<span class="token operator">-></span>options<span class="token punctuation">.</span>comparator<span class="token operator">-></span><span class="token function">FindShortestSeparator</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>r<span class="token operator">-></span>last_key<span class="token punctuation">,</span> key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>string handle_encoding<span class="token punctuation">;</span>
+    r<span class="token operator">-></span>pending_handle<span class="token punctuation">.</span><span class="token function">EncodeTo</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>handle_encoding<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    r<span class="token operator">-></span>index_block<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span>r<span class="token operator">-></span>last_key<span class="token punctuation">,</span> <span class="token function">Slice</span><span class="token punctuation">(</span>handle_encoding<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    r<span class="token operator">-></span>pending_index_entry <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>TableBuilder会为上一个DataBlock寻找一个separate key，即上面的第五行。然后将上一个DataBlock的BlockHandle编码后写入IndexBlockBuilder中。</p>
+</li>
+<li><p><strong>向FilterBlock中添加该key</strong>，FilterBlock的作用是用于加速key的查询，这在之前已经说过了。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">if</span> <span class="token punctuation">(</span>r<span class="token operator">-></span>filter_block <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  r<span class="token operator">-></span>filter_block<span class="token operator">-></span><span class="token function">AddKey</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p><strong>向DataBlock中添加key-value数据</strong>：直接调用BlockBuilder的Add接口即可</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">r<span class="token operator">-></span>last_key<span class="token punctuation">.</span><span class="token function">assign</span><span class="token punctuation">(</span>key<span class="token punctuation">.</span><span class="token function">data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> key<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+r<span class="token operator">-></span>num_entries<span class="token operator">++</span><span class="token punctuation">;</span>
+r<span class="token operator">-></span>data_block<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> value<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p><strong>检查当前的TableBuilder是否需要将最近的一个DataBlock刷盘</strong>。判断的依据是DataBlock的大小是否已经超过设置的阈值了。将DataBlock刷盘需要调用BlockBuilder的<code>Finish()</code>函数返回真实的Slice数据，然后将这部分数据调用<code>WritableFile</code>的<code>Append</code>接口直接写入</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">const</span> size_t estimated_block_size <span class="token operator">=</span> r<span class="token operator">-></span>data_block<span class="token punctuation">.</span><span class="token function">CurrentSizeEstimate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>estimated_block_size <span class="token operator">>=</span> r<span class="token operator">-></span>options<span class="token punctuation">.</span>block_size<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token function">Flush</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+</ol>
+<h3 id="void-Flush"><a href="#void-Flush" class="headerlink" title="void Flush()"></a>void Flush()</h3><p><code>Flush()</code>操作主要包括两个调用部分，第一部分是调用自己本身的一个WriteBlock函数将DataBlock中的数据序列化之后的结果写入到WritableFile中，然后调用<code>WritableFile</code>的<code>Flush</code>接口来确保数据落盘。第二部分是创建一个新的FilterBlock。</p>
+<ol>
+<li><p>调用<code>WriteBlock</code>接口将当前的<code>BlockBuilder</code>中的数据append到文件中，WriteBlock内部增加了一些如数据压缩等功能:</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token function">WriteBlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>r<span class="token operator">-></span>data_block<span class="token punctuation">,</span> <span class="token operator">&amp;</span>r<span class="token operator">-></span>pending_handle<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  r<span class="token operator">-></span>pending_index_entry <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+  r<span class="token operator">-></span>status <span class="token operator">=</span> r<span class="token operator">-></span>file<span class="token operator">-></span><span class="token function">Flush</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>开启一个新的FilterBlock：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">if</span> <span class="token punctuation">(</span>r<span class="token operator">-></span>filter_block <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  r<span class="token operator">-></span>filter_block<span class="token operator">-></span><span class="token function">StartBlock</span><span class="token punctuation">(</span>r<span class="token operator">-></span>offset<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+</li>
+</ol>
+<p>其中关于<code>WriteBlock</code>的调用流程如下：TableBuilder会调用DataBlock的Finish()函数获得当前BlockBuilder的数据，该数据是一个Slice，然后对指定的Slice数据进行压缩。压缩后得到的数据会被写入到底层的WritableFile中(调用WriteRawBlock)</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token class-name">TableBuilder</span><span class="token double-colon punctuation">::</span><span class="token function">WriteBlock</span><span class="token punctuation">(</span>BlockBuilder<span class="token operator">*</span> block<span class="token punctuation">,</span> BlockHandle<span class="token operator">*</span> handle<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// File format contains a sequence of blocks where each block has:</span>
+  <span class="token comment">//    block_data: uint8[n]</span>
+  <span class="token comment">//    type: uint8</span>
+  <span class="token comment">//    crc: uint32</span>
+  <span class="token function">assert</span><span class="token punctuation">(</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Rep<span class="token operator">*</span> r <span class="token operator">=</span> rep_<span class="token punctuation">;</span>
+  Slice raw <span class="token operator">=</span> block<span class="token operator">-></span><span class="token function">Finish</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  Slice block_contents<span class="token punctuation">;</span>
+  CompressionType type <span class="token operator">=</span> r<span class="token operator">-></span>options<span class="token punctuation">.</span>compression<span class="token punctuation">;</span>
+  <span class="token comment">// TODO(postrelease): Support more compression options: zlib?</span>
+  <span class="token keyword">switch</span> <span class="token punctuation">(</span>type<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">case</span> kNoCompression<span class="token operator">:</span>
+      block_contents <span class="token operator">=</span> raw<span class="token punctuation">;</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">case</span> kSnappyCompression<span class="token operator">:</span> <span class="token punctuation">&#123;</span>
+      std<span class="token double-colon punctuation">::</span>string<span class="token operator">*</span> compressed <span class="token operator">=</span> <span class="token operator">&amp;</span>r<span class="token operator">-></span>compressed_output<span class="token punctuation">;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>port<span class="token double-colon punctuation">::</span><span class="token function">Snappy_Compress</span><span class="token punctuation">(</span>raw<span class="token punctuation">.</span><span class="token function">data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> raw<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> compressed<span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span>
+          compressed<span class="token operator">-></span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> raw<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token punctuation">(</span>raw<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">8u</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        block_contents <span class="token operator">=</span> <span class="token operator">*</span>compressed<span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// Snappy not supported, or compressed less than 12.5%, so just</span>
+        <span class="token comment">// store uncompressed form</span>
+        block_contents <span class="token operator">=</span> raw<span class="token punctuation">;</span>
+        type <span class="token operator">=</span> kNoCompression<span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token function">WriteRawBlock</span><span class="token punctuation">(</span>block_contents<span class="token punctuation">,</span> type<span class="token punctuation">,</span> handle<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  r<span class="token operator">-></span>compressed_output<span class="token punctuation">.</span><span class="token function">clear</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  block<span class="token operator">-></span><span class="token function">Reset</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>WriteRawBlock在将数据追加到底层的文件的同时，也会对写入的block_contents生成CRC校验码，同时增加compression的type。形成一个5B的BlockTrailer，这个Trailer会被追加到该DataBlock的末尾。</p>
+<h3 id="Status-Finish"><a href="#Status-Finish" class="headerlink" title="Status Finish()"></a>Status Finish()</h3><p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable/LevelDBTableFinish.png" width="100%"></p>
+<p><code>TableBuilder::Finish()</code>的调用会结束对当前的Table的构建，也就是将最后留下的DataBlock Flush到文件中，然后将后续的多个MetaBlock追加到文件末尾。最后添加Footer作为整个文件的元数据。整个函数的执行过程也可以分为以下5个部分：</p>
+<ol>
+<li><p><strong>刷新现有的DataBlock:</strong></p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Status <span class="token class-name">TableBuilder</span><span class="token double-colon punctuation">::</span><span class="token function">Finish</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  Rep<span class="token operator">*</span> r <span class="token operator">=</span> rep_<span class="token punctuation">;</span>
+  <span class="token function">Flush</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">assert</span><span class="token punctuation">(</span><span class="token operator">!</span>r<span class="token operator">-></span>closed<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  r<span class="token operator">-></span>closed <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p><strong>将FilterBlock的数据添加到文件中</strong></p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// Write filter block</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> r<span class="token operator">-></span>filter_block <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token function">WriteRawBlock</span><span class="token punctuation">(</span>r<span class="token operator">-></span>filter_block<span class="token operator">-></span><span class="token function">Finish</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> kNoCompression<span class="token punctuation">,</span>
+                <span class="token operator">&amp;</span>filter_block_handle<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p><strong>构建MetaIndexBlock的数据</strong>，简单而言MetaIndexBlock保存的是FilterBlock的BlockHandle，但是由于MetaIndexBlock采用的是BlockBuilder，其Add接口需要一对key value数据。所以这里需要手工共建一个key，LevelDB选择了一个人工可读的key名称：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  BlockBuilder <span class="token function">meta_index_block</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>r<span class="token operator">-></span>options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>r<span class="token operator">-></span>filter_block <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// Add mapping from "filter.Name" to location of filter data</span>
+    std<span class="token double-colon punctuation">::</span>string key <span class="token operator">=</span> <span class="token string">"filter."</span><span class="token punctuation">;</span>
+    key<span class="token punctuation">.</span><span class="token function">append</span><span class="token punctuation">(</span>r<span class="token operator">-></span>options<span class="token punctuation">.</span>filter_policy<span class="token operator">-></span><span class="token function">Name</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>string handle_encoding<span class="token punctuation">;</span>
+    filter_block_handle<span class="token punctuation">.</span><span class="token function">EncodeTo</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>handle_encoding<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    meta_index_block<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> handle_encoding<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+   
+  <span class="token comment">// TODO(postrelease): Add stats and other meta blocks</span>
+  <span class="token function">WriteBlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>meta_index_block<span class="token punctuation">,</span> <span class="token operator">&amp;</span>metaindex_block_handle<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p><strong>为刚刚刷新的最后一个DataBlock在IndexBlock中构建一个索引的entry</strong>, 然后将所有的IndexBlock的数据追加到文件中。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>r<span class="token operator">-></span>pending_index_entry<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    r<span class="token operator">-></span>options<span class="token punctuation">.</span>comparator<span class="token operator">-></span><span class="token function">FindShortSuccessor</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>r<span class="token operator">-></span>last_key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>string handle_encoding<span class="token punctuation">;</span>
+    r<span class="token operator">-></span>pending_handle<span class="token punctuation">.</span><span class="token function">EncodeTo</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>handle_encoding<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    r<span class="token operator">-></span>index_block<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span>r<span class="token operator">-></span>last_key<span class="token punctuation">,</span> <span class="token function">Slice</span><span class="token punctuation">(</span>handle_encoding<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    r<span class="token operator">-></span>pending_index_entry <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token function">WriteBlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>r<span class="token operator">-></span>index_block<span class="token punctuation">,</span> <span class="token operator">&amp;</span>index_block_handle<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p><strong>为整个文件添加一个Footer</strong>, 并将其追加到整个文件末尾。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  Footer footer<span class="token punctuation">;</span>
+  footer<span class="token punctuation">.</span><span class="token function">set_metaindex_handle</span><span class="token punctuation">(</span>metaindex_block_handle<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  footer<span class="token punctuation">.</span><span class="token function">set_index_handle</span><span class="token punctuation">(</span>index_block_handle<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  std<span class="token double-colon punctuation">::</span>string footer_encoding<span class="token punctuation">;</span>
+  footer<span class="token punctuation">.</span><span class="token function">EncodeTo</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>footer_encoding<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  r<span class="token operator">-></span>status <span class="token operator">=</span> r<span class="token operator">-></span>file<span class="token operator">-></span><span class="token function">Append</span><span class="token punctuation">(</span>footer_encoding<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>r<span class="token operator">-></span>status<span class="token punctuation">.</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    r<span class="token operator">-></span>offset <span class="token operator">+=</span> footer_encoding<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+</ol>
+<h1 id="SSTable-File的读取与遍历"><a href="#SSTable-File的读取与遍历" class="headerlink" title="SSTable File的读取与遍历"></a>SSTable File的读取与遍历</h1><p>LevelDB的SSTable数据读取涉及到的相关结构和类如下所示：</p>
+<p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable/LevelDBBlockReader.svg" width="100%"></p>
+<ul>
+<li><code>Table</code>: 按照代码注释中的说法，一个Table就是一个不可变的Map，提供了从Key到Value的映射。在LevelDB中，Table并没有直接提供类似于<code>Table::Get(key, value)</code>这样的接口，而是提供了一个迭代器的创建接口，通过调用迭代器的<code>Seek()</code>接口来找到目标key。</li>
+<li><code>Block</code>: Block是对一个DataBlock的读取接口，类似于在写入SST时的BlockBuilder，这里的Block对从文件中读上来的“裸数据”进行解析，实现Get的功能。类似于Table，Block也不直接提供Get的接口，而是提供了在一个Block上创建迭代器的接口。</li>
+<li><code>FilterBlockReader</code>： 提供了KeyMayMatch接口，用于在FilterBlock中查询一个指定的key是否存在。</li>
+</ul>
+<p>对于Table而言，比较重要的接口包括：</p>
+<ul>
+<li>对一个已有的immutable的file创建一个Table，即：<code>Table::Open(const Options, RandomAccessFile*, uint64_t, Table**)</code>接口。</li>
+<li>在创建出来的Table中进行key-value数据的查询，即: <code>Table::NewIterator</code>接口。</li>
+</ul>
+<h2 id="Table的创建"><a href="#Table的创建" class="headerlink" title="Table的创建"></a>Table的创建</h2><h3 id="Table-Open"><a href="#Table-Open" class="headerlink" title="Table::Open"></a>Table::Open</h3><p>从一个已有的<code>RandomAccessFile</code>创建一个Table的过程需要下面几个步骤：</p>
+<ul>
+<li><p>从该RandomAccessFile中读取整个SST的Footer并解析:</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Status <span class="token class-name">Table</span><span class="token double-colon punctuation">::</span><span class="token function">Open</span><span class="token punctuation">(</span><span class="token keyword">const</span> Options<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> RandomAccessFile<span class="token operator">*</span> file<span class="token punctuation">,</span>
+                   <span class="token keyword">uint64_t</span> size<span class="token punctuation">,</span> Table<span class="token operator">*</span><span class="token operator">*</span> table<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">char</span> footer_space<span class="token punctuation">[</span>Footer<span class="token double-colon punctuation">::</span>kEncodedLength<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  Slice footer_input<span class="token punctuation">;</span>
+  Status s <span class="token operator">=</span> file<span class="token operator">-></span><span class="token function">Read</span><span class="token punctuation">(</span>size <span class="token operator">-</span> Footer<span class="token double-colon punctuation">::</span>kEncodedLength<span class="token punctuation">,</span> Footer<span class="token double-colon punctuation">::</span>kEncodedLength<span class="token punctuation">,</span>
+                        <span class="token operator">&amp;</span>footer_input<span class="token punctuation">,</span> footer_space<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>s<span class="token punctuation">.</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">return</span> s<span class="token punctuation">;</span>
+
+  Footer footer<span class="token punctuation">;</span>
+  s <span class="token operator">=</span> footer<span class="token punctuation">.</span><span class="token function">DecodeFrom</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>footer_input<span class="token punctuation">)</span><span class="token punctuation">;</span>
+ 	<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>从解析的Footer中读出IndexBlock的位置，然后将IndexBlock的数据读入到内存中。这是因为对一个SST进行kv查询时需要依赖IndexBlock的数据来定位目标key所在的位置，这是一个不可避免的操作，将IndexBlock的数据cache在内存中可以加速读操作。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Status <span class="token class-name">Table</span><span class="token double-colon punctuation">::</span><span class="token function">Open</span><span class="token punctuation">(</span><span class="token keyword">const</span> Options<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> RandomAccessFile<span class="token operator">*</span> file<span class="token punctuation">,</span>
+                   <span class="token keyword">uint64_t</span> size<span class="token punctuation">,</span> Table<span class="token operator">*</span><span class="token operator">*</span> table<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+	BlockContents index_block_contents<span class="token punctuation">;</span>
+  ReadOptions opt<span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>options<span class="token punctuation">.</span>paranoid_checks<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    opt<span class="token punctuation">.</span>verify_checksums <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  s <span class="token operator">=</span> <span class="token function">ReadBlock</span><span class="token punctuation">(</span>file<span class="token punctuation">,</span> opt<span class="token punctuation">,</span> footer<span class="token punctuation">.</span><span class="token function">index_handle</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>index_block_contents<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>其中BlockContents用于保存从file中读取到的“裸数据”，并且增加了一些所有权的管理(例如，如果多个线程都需要读取同一个Block的数据，由于SST的数据不可变，所以只需要分配一份Block的内存即可，因此这涉及到内存释放的问题)</p>
+<p><code>ReadBlock</code>是一个从给定的RandomAccessFile中读取指定Block的接口，并且内部提供了CRC校验等功能。</p>
+</li>
+<li><p>构建一个Table结构，将数据域进行填充，并且执行<code>ReadMeta</code>函数来将FilterBlock的数据读出：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Status <span class="token class-name">Table</span><span class="token double-colon punctuation">::</span><span class="token function">Open</span><span class="token punctuation">(</span><span class="token keyword">const</span> Options<span class="token operator">&amp;</span> options<span class="token punctuation">,</span> RandomAccessFile<span class="token operator">*</span> file<span class="token punctuation">,</span>
+                   <span class="token keyword">uint64_t</span> size<span class="token punctuation">,</span> Table<span class="token operator">*</span><span class="token operator">*</span> table<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  	<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+	  <span class="token keyword">if</span> <span class="token punctuation">(</span>s<span class="token punctuation">.</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// We've successfully read the footer and the index block: we're</span>
+    <span class="token comment">// ready to serve requests.</span>
+    Block<span class="token operator">*</span> index_block <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">Block</span><span class="token punctuation">(</span>index_block_contents<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Rep<span class="token operator">*</span> rep <span class="token operator">=</span> <span class="token keyword">new</span> Table<span class="token double-colon punctuation">::</span>Rep<span class="token punctuation">;</span>
+    rep<span class="token operator">-></span>options <span class="token operator">=</span> options<span class="token punctuation">;</span>
+    rep<span class="token operator">-></span>file <span class="token operator">=</span> file<span class="token punctuation">;</span>
+    rep<span class="token operator">-></span>metaindex_handle <span class="token operator">=</span> footer<span class="token punctuation">.</span><span class="token function">metaindex_handle</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    rep<span class="token operator">-></span>index_block <span class="token operator">=</span> index_block<span class="token punctuation">;</span>
+    rep<span class="token operator">-></span>cache_id <span class="token operator">=</span> <span class="token punctuation">(</span>options<span class="token punctuation">.</span>block_cache <span class="token operator">?</span> options<span class="token punctuation">.</span>block_cache<span class="token operator">-></span><span class="token function">NewId</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// (kqh) Filter data will be constructed in ReadMeta</span>
+    rep<span class="token operator">-></span>filter_data <span class="token operator">=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span>
+    rep<span class="token operator">-></span>filter <span class="token operator">=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span>
+    <span class="token operator">*</span>table <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">Table</span><span class="token punctuation">(</span>rep<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">(</span><span class="token operator">*</span>table<span class="token punctuation">)</span><span class="token operator">-></span><span class="token function">ReadMeta</span><span class="token punctuation">(</span>footer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>其中ReadMeta函数会根据Footer找到<code>MetaIndexBlock</code>所对应的BlockHandle，然后从文件中读取这部分数据，以FilterPolicy的名字作为key来找到对应的<code>FilterBlock</code>对应的BlockHandle，然后File中读出真正的FilterBlock数据(创建一个<code>FilterReader</code>)。</p>
+</li>
+</ul>
+<h3 id="ReadBlock"><a href="#ReadBlock" class="headerlink" title="ReadBlock"></a>ReadBlock</h3><p><code>ReadBlock</code>是一个通用的从ReadomAccessFile中读取指定块的接口。并且会根据对应Block的Trailer进行CRC校验来保证读取数据的正确性，以及对数据进行解压缩操作。整个函数的实现也非常直接：</p>
+<ul>
+<li><p>首先是直接调用RandomAccessFile的Read接口来读到指定Block大小的数据：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Status <span class="token function">ReadBlock</span><span class="token punctuation">(</span>RandomAccessFile<span class="token operator">*</span> file<span class="token punctuation">,</span> <span class="token keyword">const</span> ReadOptions<span class="token operator">&amp;</span> options<span class="token punctuation">,</span>
+                 <span class="token keyword">const</span> BlockHandle<span class="token operator">&amp;</span> handle<span class="token punctuation">,</span> BlockContents<span class="token operator">*</span> result<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	result<span class="token operator">-></span>data <span class="token operator">=</span> <span class="token function">Slice</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  result<span class="token operator">-></span>cachable <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  result<span class="token operator">-></span>heap_allocated <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// Read the block contents as well as the type/crc footer.</span>
+  <span class="token comment">// See table_builder.cc for the code that built this structure.</span>
+  size_t n <span class="token operator">=</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span>size_t<span class="token operator">></span></span></span><span class="token punctuation">(</span>handle<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">char</span><span class="token operator">*</span> buf <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token keyword">char</span><span class="token punctuation">[</span>n <span class="token operator">+</span> kBlockTrailerSize<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  Slice contents<span class="token punctuation">;</span>
+  Status s <span class="token operator">=</span> file<span class="token operator">-></span><span class="token function">Read</span><span class="token punctuation">(</span>handle<span class="token punctuation">.</span><span class="token function">offset</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> n <span class="token operator">+</span> kBlockTrailerSize<span class="token punctuation">,</span> <span class="token operator">&amp;</span>contents<span class="token punctuation">,</span> buf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>s<span class="token punctuation">.</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">delete</span><span class="token punctuation">[</span><span class="token punctuation">]</span> buf<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> s<span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token comment">// (kqh) Expect to read n + kBlockTrailerSize, but not get that many data</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>contents<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> n <span class="token operator">+</span> kBlockTrailerSize<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">delete</span><span class="token punctuation">[</span><span class="token punctuation">]</span> buf<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token class-name">Status</span><span class="token double-colon punctuation">::</span><span class="token function">Corruption</span><span class="token punctuation">(</span><span class="token string">"truncated block read"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>然后进行CRC码校验：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Status <span class="token function">ReadBlock</span><span class="token punctuation">(</span>RandomAccessFile<span class="token operator">*</span> file<span class="token punctuation">,</span> <span class="token keyword">const</span> ReadOptions<span class="token operator">&amp;</span> options<span class="token punctuation">,</span>
+                 <span class="token keyword">const</span> BlockHandle<span class="token operator">&amp;</span> handle<span class="token punctuation">,</span> BlockContents<span class="token operator">*</span> result<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+	<span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> data <span class="token operator">=</span> contents<span class="token punctuation">.</span><span class="token function">data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Pointer to where Read put the data</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>options<span class="token punctuation">.</span>verify_checksums<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">const</span> <span class="token keyword">uint32_t</span> crc <span class="token operator">=</span> crc32c<span class="token double-colon punctuation">::</span><span class="token function">Unmask</span><span class="token punctuation">(</span><span class="token function">DecodeFixed32</span><span class="token punctuation">(</span>data <span class="token operator">+</span> n <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> <span class="token keyword">uint32_t</span> actual <span class="token operator">=</span> crc32c<span class="token double-colon punctuation">::</span><span class="token function">Value</span><span class="token punctuation">(</span>data<span class="token punctuation">,</span> n <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>actual <span class="token operator">!=</span> crc<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">delete</span><span class="token punctuation">[</span><span class="token punctuation">]</span> buf<span class="token punctuation">;</span>
+      s <span class="token operator">=</span> <span class="token class-name">Status</span><span class="token double-colon punctuation">::</span><span class="token function">Corruption</span><span class="token punctuation">(</span><span class="token string">"block checksum mismatch"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> s<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>最后检查该Block的压缩类型，如果是Snappy压缩则需要额外分配空间来写入解压缩之后的数据，我们省略这部分代码, 具体的内容感兴趣地话可以参考代码实现。</p>
+</li>
+</ul>
+<h3 id="ReadMeta"><a href="#ReadMeta" class="headerlink" title="ReadMeta"></a>ReadMeta</h3><p><code>ReadMeta</code>首先根据Footer的信息读出MetaIndexBlock的数据，该block中保存了一个filter policy到其对应的FilterBlock的BlockHandle数据。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Status <span class="token class-name">Table</span><span class="token double-colon punctuation">::</span><span class="token function">ReadMeta</span><span class="token punctuation">(</span><span class="token keyword">const</span> Footer<span class="token operator">&amp;</span> footer<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+	BlockContents contents<span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">ReadBlock</span><span class="token punctuation">(</span>rep_<span class="token operator">-></span>file<span class="token punctuation">,</span> opt<span class="token punctuation">,</span> footer<span class="token punctuation">.</span><span class="token function">metaindex_handle</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>contents<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">ok</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// Do not propagate errors since meta info is not needed for operation</span>
+    <span class="token keyword">return</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  Block<span class="token operator">*</span> meta <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">Block</span><span class="token punctuation">(</span>contents<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在MetaIndexBlock中搜索一个filter policy指定的BlockHandle时，通过显式指定其名字来找到对应的FilterBlock的BlockHandle，然后读取对应的Block中的数据：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">Status <span class="token class-name">Table</span><span class="token double-colon punctuation">::</span><span class="token function">ReadMeta</span><span class="token punctuation">(</span><span class="token keyword">const</span> Footer<span class="token operator">&amp;</span> footer<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+	Iterator<span class="token operator">*</span> iter <span class="token operator">=</span> meta<span class="token operator">-></span><span class="token function">NewIterator</span><span class="token punctuation">(</span><span class="token function">BytewiseComparator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  std<span class="token double-colon punctuation">::</span>string key <span class="token operator">=</span> <span class="token string">"filter."</span><span class="token punctuation">;</span>
+  key<span class="token punctuation">.</span><span class="token function">append</span><span class="token punctuation">(</span>rep_<span class="token operator">-></span>options<span class="token punctuation">.</span>filter_policy<span class="token operator">-></span><span class="token function">Name</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  iter<span class="token operator">-></span><span class="token function">Seek</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>iter<span class="token operator">-></span><span class="token function">Valid</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> iter<span class="token operator">-></span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token function">Slice</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token function">ReadFilter</span><span class="token punctuation">(</span>iter<span class="token operator">-></span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>而ReadFilter函数则是对读取出来的裸数据，即<code>ReadBlock</code>获得的数据构建一个FilterBlock。</p>
+<hr>
+<h2 id="Table创建迭代器进行遍历和Seek操作"><a href="#Table创建迭代器进行遍历和Seek操作" class="headerlink" title="Table创建迭代器进行遍历和Seek操作"></a>Table创建迭代器进行遍历和Seek操作</h2><p>Table通过创建一个迭代器来提供对整个Table的遍历以及Seek到指定key位置的功能。LevelDB中迭代器的基类是<code>Iterator</code>，所有其他具体的迭代器都是对这个抽象基类的实现。在Table这一个模块中，我们涉及到两种具体的迭代器, 如下所示：</p>
+<p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable/LevelDBTableIter.svg" width="100%"></p>
+<ul>
+<li><code>TwoLevelIterator</code>: 即整个Table返回的迭代器，提供在整个Table的Key-Value数据上进行迭代的接口。称其为TwoLevel是因为这个迭代器同时保存了对IndexBlock的迭代器以及对某个DataBlock的迭代器(保存为IteratorWrapper)。并且在进行遍历或者seek操作时需要先对IndexBlock的迭代器进行seek，然后再对目标Block的迭代器进行Seek。</li>
+<li><code>Block::Iter</code>: 在某个Block上进行迭代的迭代器。提供对整个Block内数据进行迭代的功能。</li>
+<li><code>IteratorWrapper</code>: 基本上只是对具体的Iterator的一层封装，按照代码注释的说法，这样封装具有<strong>更好的cache局部性</strong>(为啥)？</li>
+</ul>
+<p>当Table需要创建一个针对该Table的Iterator时，它直接调用<code>NewTwoLevelIterator</code>， 但是Table会先在index block上创建一个Block::Iter类型，再将其作为参数传递给<code>NewTwoLevelIterator</code>。 </p>
+<p>由于DataBlock和IndexBlock实际上都是采用Block格式来保存key到value的映射，因此二者创建的Iterator类型是相同的，都是<code>Block::Iter</code>。 我们先介绍<code>Block::Iter</code>的实现。</p>
+<h3 id="Block-Iter的实现"><a href="#Block-Iter的实现" class="headerlink" title="Block::Iter的实现"></a>Block::Iter的实现</h3><h4 id="数据成员"><a href="#数据成员" class="headerlink" title="数据成员"></a>数据成员</h4><p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable/LevelDBBlockIter.svg" width="100%"></p>
+<p><code>BlockIter</code>的各个域到其数据排布的映射如上图所示。其中:</p>
+<ul>
+<li><code>restarts_, nm_restarts_</code>限定了整个SST的<code>restart group index array</code>的位置。</li>
+<li><code>current_</code>限定了当前的读指针的位置，在正常情况下，它只能在数据区移动，即多个Restart group之间。</li>
+<li><code>restart_index_</code> 说明了当前的<code>current_</code>指针所在的Restart Group的位置。</li>
+</ul>
+<p>接下来我们解析<code>Block::Iter</code>的几个操作接口， Iterator基类约定了需要实现多个接口函数，但为了简单考虑这里我们只看几个比较重要的函数实现：</p>
+<ul>
+<li><code>Next()</code>, 将当前的key value移动到下一个位置，需要更新current_指针，<code>restart_index_</code>等多个成员变量。</li>
+<li><code>Seek()</code>， 将迭代器移动到指定的key的位置。</li>
+<li><code>Valid()</code>， 检查当前迭代器是否有效。</li>
+</ul>
+<h4 id="Next-的实现"><a href="#Next-的实现" class="headerlink" title="Next()的实现"></a>Next()的实现</h4><p><code>Next()</code>的实现只是简单地调用了一个<code>ParseNextKey</code>的函数，在这个函数内部，迭代器将解析一个<code>Restart Group</code>内部的key-value数据：首先，该函数读取一个key-value pair的header, 即一个triple: <code>shared size, non-shared size, value size</code>。 </p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">bool</span> Block<span class="token double-colon punctuation">::</span><span class="token class-name">Iter</span><span class="token double-colon punctuation">::</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  	<span class="token comment">// Move the current read pointer to the position of next key-value pair, preparing for reading</span>
+    <span class="token comment">// its header triple </span>
+		current_ <span class="token operator">=</span> <span class="token function">NextEntryOffset</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> p <span class="token operator">=</span> data_ <span class="token operator">+</span> current_<span class="token punctuation">;</span>
+    <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> limit <span class="token operator">=</span> data_ <span class="token operator">+</span> restarts_<span class="token punctuation">;</span>  <span class="token comment">// Restarts come right after data</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>p <span class="token operator">>=</span> limit<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token comment">// No more entries to return.  Mark as invalid.</span>
+      current_ <span class="token operator">=</span> restarts_<span class="token punctuation">;</span>
+      restart_index_ <span class="token operator">=</span> num_restarts_<span class="token punctuation">;</span>
+      <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token comment">// Decode next entry</span>
+    <span class="token keyword">uint32_t</span> shared<span class="token punctuation">,</span> non_shared<span class="token punctuation">,</span> value_length<span class="token punctuation">;</span>
+    p <span class="token operator">=</span> <span class="token function">DecodeEntry</span><span class="token punctuation">(</span>p<span class="token punctuation">,</span> limit<span class="token punctuation">,</span> <span class="token operator">&amp;</span>shared<span class="token punctuation">,</span> <span class="token operator">&amp;</span>non_shared<span class="token punctuation">,</span> <span class="token operator">&amp;</span>value_length<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// Calculate the offset of the next key-value pair, based on current value pointer and value size</span>
+<span class="token keyword">inline</span> <span class="token keyword">uint32_t</span> <span class="token function">NextEntryOffset</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">return</span> <span class="token punctuation">(</span>value_<span class="token punctuation">.</span><span class="token function">data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> value_<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">-</span> data_<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>通过调用<code>DecodeEntry</code>, 拿到下一个键值对的header消息，同时返回的指针p指定了non-shared key的位置。第二步就是通过拼接shared-key部分的数据与non-shared key部分的数据来得到完整的key。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">bool</span> Block<span class="token double-colon punctuation">::</span><span class="token class-name">Iter</span><span class="token double-colon punctuation">::</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>      
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+	key_<span class="token punctuation">.</span><span class="token function">resize</span><span class="token punctuation">(</span>shared<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  key_<span class="token punctuation">.</span><span class="token function">append</span><span class="token punctuation">(</span>p<span class="token punctuation">,</span> non_shared<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  value_ <span class="token operator">=</span> <span class="token function">Slice</span><span class="token punctuation">(</span>p <span class="token operator">+</span> non_shared<span class="token punctuation">,</span> value_length<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">while</span> <span class="token punctuation">(</span>restart_index_ <span class="token operator">+</span> <span class="token number">1</span> <span class="token operator">&lt;</span> num_restarts_ <span class="token operator">&amp;&amp;</span>
+    <span class="token function">GetRestartPoint</span><span class="token punctuation">(</span>restart_index_ <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> current_<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token operator">++</span>restart_index_<span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里值得注意的是需要更新一下restart_index_。</p>
+<h4 id="Seek-的实现"><a href="#Seek-的实现" class="headerlink" title="Seek()的实现"></a>Seek()的实现</h4><p>在一个DataBlock内部找到一个指定的key(或者与该key相近的位置)的方法是在整个DataBlock内部进行二分查找。整个二分查找的粒度是按照restart group来的，也就是说，先确定目标key所在的restart group，然后在这个restart group内部顺序遍历找到目标key或者目标key的下一个位置。</p>
+<p>而通过二分查找确定目标key所在的restart group时，使用该restart group的第一个key来与目标key进行比较，如果目标key比该key大，说明该目标key在这个restart group或其之后的restart group中；否则说明目标key在该key之前的restart group</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> Block<span class="token double-colon punctuation">::</span><span class="token class-name">Iter</span><span class="token double-colon punctuation">::</span><span class="token function">Seek</span><span class="token punctuation">(</span><span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> target<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+  <span class="token comment">// You may treat left and right are initialized to be 0 and num_restarts_ - 1 </span>
+  <span class="token comment">// respectively</span>
+	<span class="token keyword">while</span> <span class="token punctuation">(</span>left <span class="token operator">&lt;</span> right<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">uint32_t</span> mid <span class="token operator">=</span> <span class="token punctuation">(</span>left <span class="token operator">+</span> right <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">;</span>
+      <span class="token keyword">uint32_t</span> region_offset <span class="token operator">=</span> <span class="token function">GetRestartPoint</span><span class="token punctuation">(</span>mid<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">uint32_t</span> shared<span class="token punctuation">,</span> non_shared<span class="token punctuation">,</span> value_length<span class="token punctuation">;</span>
+      <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> key_ptr <span class="token operator">=</span>
+          <span class="token function">DecodeEntry</span><span class="token punctuation">(</span>data_ <span class="token operator">+</span> region_offset<span class="token punctuation">,</span> data_ <span class="token operator">+</span> restarts_<span class="token punctuation">,</span> <span class="token operator">&amp;</span>shared<span class="token punctuation">,</span>
+                      <span class="token operator">&amp;</span>non_shared<span class="token punctuation">,</span> <span class="token operator">&amp;</span>value_length<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>key_ptr <span class="token operator">==</span> <span class="token keyword">nullptr</span> <span class="token operator">||</span> <span class="token punctuation">(</span>shared <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">CorruptionError</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+      Slice <span class="token function">mid_key</span><span class="token punctuation">(</span>key_ptr<span class="token punctuation">,</span> non_shared<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">Compare</span><span class="token punctuation">(</span>mid_key<span class="token punctuation">,</span> target<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// Key at "mid" is smaller than "target".  Therefore all</span>
+        <span class="token comment">// blocks before "mid" are uninteresting.</span>
+        left <span class="token operator">=</span> mid<span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// Key at "mid" is >= "target".  Therefore all blocks at or</span>
+        <span class="token comment">// after "mid" are uninteresting.</span>
+        right <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>一旦目标key所在的restart group或者相邻的group被定位到了之后，就可以顺序地在该restart group内部查找指定的key:</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> Block<span class="token double-colon punctuation">::</span><span class="token class-name">Iter</span><span class="token double-colon punctuation">::</span><span class="token function">Seek</span><span class="token punctuation">(</span><span class="token keyword">const</span> Slice<span class="token operator">&amp;</span> target<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+  <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">ParseNextKey</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">Compare</span><span class="token punctuation">(</span>key_<span class="token punctuation">,</span> target<span class="token punctuation">)</span> <span class="token operator">>=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>值得注意的是，上面通过二分查找找到的restart group并不一定就是目标key所在的restart group；但一定保证当前的key_一定满足 key_ &lt; target_key。</p>
+<h4 id="Valid-的实现"><a href="#Valid-的实现" class="headerlink" title="Valid()的实现"></a>Valid()的实现</h4><p>valid()简单地检查当前的读指针是否在一个有效的范围内即可, 即不要超出restart offset array所在的数据范围即可。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">bool</span> <span class="token function">Valid</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token keyword">override</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> current_ <span class="token operator">&lt;</span> restarts_<span class="token punctuation">;</span> <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>在Next调用的时候，函数会检查当前的读指针范围是否已经抵达了整个DataBlock的restart offset array部分，如果是，则将整个迭代器的状态置为无效。另外，一些数据不一致之类的错误也会将迭代器状态置为无效，例如发现数据编码出现了问题：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">bool</span> Block<span class="token double-colon punctuation">::</span><span class="token class-name">Iter</span><span class="token double-colon punctuation">::</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>   
+	<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+  <span class="token keyword">uint32_t</span> shared<span class="token punctuation">,</span> non_shared<span class="token punctuation">,</span> value_length<span class="token punctuation">;</span>
+  p <span class="token operator">=</span> <span class="token function">DecodeEntry</span><span class="token punctuation">(</span>p<span class="token punctuation">,</span> limit<span class="token punctuation">,</span> <span class="token operator">&amp;</span>shared<span class="token punctuation">,</span> <span class="token operator">&amp;</span>non_shared<span class="token punctuation">,</span> <span class="token operator">&amp;</span>value_length<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>p <span class="token operator">==</span> <span class="token keyword">nullptr</span> <span class="token operator">||</span> key_<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> shared<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token function">CorruptionError</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+	<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">void</span> Block<span class="token double-colon punctuation">::</span><span class="token class-name">Iter</span><span class="token double-colon punctuation">::</span><span class="token function">CorruptionError</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  current_ <span class="token operator">=</span> restarts_<span class="token punctuation">;</span>
+  restart_index_ <span class="token operator">=</span> num_restarts_<span class="token punctuation">;</span>
+  status_ <span class="token operator">=</span> <span class="token class-name">Status</span><span class="token double-colon punctuation">::</span><span class="token function">Corruption</span><span class="token punctuation">(</span><span class="token string">"bad entry in block"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  key_<span class="token punctuation">.</span><span class="token function">clear</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  value_<span class="token punctuation">.</span><span class="token function">clear</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="TwoLevelIterator的实现"><a href="#TwoLevelIterator的实现" class="headerlink" title="TwoLevelIterator的实现"></a>TwoLevelIterator的实现</h3><p><code>TwoLevelIterator</code>的数据域到对应的SST数据布局的关系如下所示：</p>
+<p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable/LevelDBTwoLevelIterator.png" width="50%"></p>
+<p>其中<code>TwoLevelIterator</code>保存了两个Iterator，分别用于在<code>IndexBlock</code>中找对应Block, 以及在对应的DataBlock中找到对应的key。</p>
+<h4 id="Next-的实现-1"><a href="#Next-的实现-1" class="headerlink" title="Next()的实现"></a>Next()的实现</h4><p><code>TwoLevelIterator</code>的Next首先对现有的<code>DataBlock</code>的迭代器调用<code>Next()</code>, 然后检查该data block的迭代器是否已经到达了整个DataBlock的末尾了，如果到达了，则对Index Iterator读取下一个data block的位置，然后构建一个新的对data block的迭代器。</p>
+<p>如果当前的data block已经到达了最后一个位置，那么会对index_iter_调用next函数，获得下一个data block的位置，然后调用<code>InitDataBlock</code>来获得对下一个DataBlock的迭代器。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token class-name">TwoLevelIterator</span><span class="token double-colon punctuation">::</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token function">assert</span><span class="token punctuation">(</span><span class="token function">Valid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  data_iter_<span class="token punctuation">.</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">SkipEmptyDataBlocksForward</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">void</span> <span class="token class-name">TwoLevelIterator</span><span class="token double-colon punctuation">::</span><span class="token function">SkipEmptyDataBlocksForward</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">while</span> <span class="token punctuation">(</span>data_iter_<span class="token punctuation">.</span><span class="token function">iter</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token keyword">nullptr</span> <span class="token operator">||</span> <span class="token operator">!</span>data_iter_<span class="token punctuation">.</span><span class="token function">Valid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// Move to next block</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>index_iter_<span class="token punctuation">.</span><span class="token function">Valid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token function">SetDataIterator</span><span class="token punctuation">(</span><span class="token keyword">nullptr</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    index_iter_<span class="token punctuation">.</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">InitDataBlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>data_iter_<span class="token punctuation">.</span><span class="token function">iter</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> data_iter_<span class="token punctuation">.</span><span class="token function">SeekToFirst</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>到目前为止，我们已经解析了LevelDB中底层的文件实现:LevelBD使用 <code>WritableFile, RandomAccessFile</code>等作为抽象基类来提供一层对文件的使用抽象；根据不同的操作系统提供系统相关的具体文件实现，例如Posix系统使用<code>file descriptor</code>以及<code>write, read</code>等系统调用来实现。</p>
+<p>基于<code>WritableFile, RandomAccessFile</code>等抽象的文件概念，LevelDB构建了SST这一抽象概念，一个SST代表了一个持久化的键值映射。上层可以通过<code>TableBuilder</code>来插入一个键值对，也可以通过<code>TableReader</code>来创建迭代器来对数据进行遍历和点查。整个LevelDB对于文件与SST管理的层级如下图所示：</p>
+<p><img src="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable/LevelDBSSTHierarchy.png" width="50%"></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="https://Holworth.github.io"></a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://holworth.github.io/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable.html">https://holworth.github.io/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://Holworth.github.io" target="_blank">Hexo</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/LevelDB/">LevelDB</a><a class="post-meta__tags" href="/tags/C/">C++</a><a class="post-meta__tags" href="/tags/KV/">KV</a></div><div class="post_share"><div class="social-share" data-image="/../images/LevelDB.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction.html"><img class="next-cover" src="/../images/cover2.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Transactional Information Systems: Syntax and Semantics of Transaction</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-DB%E6%8E%A5%E5%8F%A3.html" title="LevelDB阅读笔记:DB接口"><img class="cover" src="/../images/LevelDB.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-01-26</div><div class="title">LevelDB阅读笔记:DB接口</div></div></a></div><div><a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Env.html" title="LevelDB阅读笔记-Env"><img class="cover" src="/../images/LevelDB.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-04-02</div><div class="title">LevelDB阅读笔记-Env</div></div></a></div><div><a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-Memtable.html" title="LevelDB阅读笔记-Memtable"><img class="cover" src="/../images/LevelDB.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-03-09</div><div class="title">LevelDB阅读笔记-Memtable</div></div></a></div><div><a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-key%E7%9B%B8%E5%85%B3%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html" title="LevelDB阅读笔记:key相关数据结构"><img class="cover" src="/../images/LevelDB.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-02-24</div><div class="title">LevelDB阅读笔记:key相关数据结构</div></div></a></div><div><a href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-%E8%AF%BB%E5%86%99%E6%B5%81%E7%A8%8B.html" title="LevelDB阅读笔记:读写流程"><img class="cover" src="/../images/LevelDB.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-02-16</div><div class="title">LevelDB阅读笔记:读写流程</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name"></div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">19</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">20</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#SSTable-File-Format"><span class="toc-number">1.</span> <span class="toc-text">SSTable File Format</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#SSTable-File%E7%9A%84%E5%88%9B%E5%BB%BA%E4%B8%8E%E5%86%99%E5%85%A5"><span class="toc-number">2.</span> <span class="toc-text">SSTable File的创建与写入</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="toc-number">2.1.</span> <span class="toc-text">数据结构</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#BlockBuilder"><span class="toc-number">2.1.1.</span> <span class="toc-text">BlockBuilder</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#DataBlock%E6%95%B0%E6%8D%AE%E6%8E%92%E5%B8%83"><span class="toc-number">2.1.1.1.</span> <span class="toc-text">DataBlock数据排布</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#Restart-Group"><span class="toc-number">2.1.1.1.1.</span> <span class="toc-text">Restart Group</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Restart-Group-offset-array"><span class="toc-number">2.1.1.1.2.</span> <span class="toc-text">Restart Group offset array</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#DataBlockTrailer"><span class="toc-number">2.1.1.1.3.</span> <span class="toc-text">DataBlockTrailer</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E8%B0%83%E7%94%A8%E6%8E%A5%E5%8F%A3"><span class="toc-number">2.1.1.2.</span> <span class="toc-text">调用接口</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#void-Add-const-Slice-amp-key-const-Slice-amp-value"><span class="toc-number">2.1.1.2.1.</span> <span class="toc-text">void Add(const Slice&amp; key, const Slice&amp; value)</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Slice-Finish"><span class="toc-number">2.1.1.2.2.</span> <span class="toc-text">Slice Finish()</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#void-Reset"><span class="toc-number">2.1.1.2.3.</span> <span class="toc-text">void Reset()</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B%E4%B8%8E%E6%89%A7%E8%A1%8C%E6%8E%A5%E5%8F%A3"><span class="toc-number">2.2.</span> <span class="toc-text">调用流程与执行接口</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#void-Add-const-Slice-amp-key-const-Slice-amp-value-1"><span class="toc-number">2.2.1.</span> <span class="toc-text">void Add(const Slice&amp; key, const Slice&amp; value)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#void-Flush"><span class="toc-number">2.2.2.</span> <span class="toc-text">void Flush()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Status-Finish"><span class="toc-number">2.2.3.</span> <span class="toc-text">Status Finish()</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#SSTable-File%E7%9A%84%E8%AF%BB%E5%8F%96%E4%B8%8E%E9%81%8D%E5%8E%86"><span class="toc-number">3.</span> <span class="toc-text">SSTable File的读取与遍历</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Table%E7%9A%84%E5%88%9B%E5%BB%BA"><span class="toc-number">3.1.</span> <span class="toc-text">Table的创建</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Table-Open"><span class="toc-number">3.1.1.</span> <span class="toc-text">Table::Open</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ReadBlock"><span class="toc-number">3.1.2.</span> <span class="toc-text">ReadBlock</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ReadMeta"><span class="toc-number">3.1.3.</span> <span class="toc-text">ReadMeta</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Table%E5%88%9B%E5%BB%BA%E8%BF%AD%E4%BB%A3%E5%99%A8%E8%BF%9B%E8%A1%8C%E9%81%8D%E5%8E%86%E5%92%8CSeek%E6%93%8D%E4%BD%9C"><span class="toc-number">3.2.</span> <span class="toc-text">Table创建迭代器进行遍历和Seek操作</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Block-Iter%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-number">3.2.1.</span> <span class="toc-text">Block::Iter的实现</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E6%88%90%E5%91%98"><span class="toc-number">3.2.1.1.</span> <span class="toc-text">数据成员</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Next-%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-number">3.2.1.2.</span> <span class="toc-text">Next()的实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Seek-%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-number">3.2.1.3.</span> <span class="toc-text">Seek()的实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Valid-%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-number">3.2.1.4.</span> <span class="toc-text">Valid()的实现</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#TwoLevelIterator%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-number">3.2.2.</span> <span class="toc-text">TwoLevelIterator的实现</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Next-%E7%9A%84%E5%AE%9E%E7%8E%B0-1"><span class="toc-number">3.2.2.1.</span> <span class="toc-text">Next()的实现</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable.html" title="LevelDB阅读笔记-SSTable"><img src="/../images/LevelDB.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="LevelDB阅读笔记-SSTable"/></a><div class="content"><a class="title" href="/post/LevelDB%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0-SSTable.html" title="LevelDB阅读笔记-SSTable">LevelDB阅读笔记-SSTable</a><time datetime="2022-08-21T13:44:04.000Z" title="发表于 2022-08-21 21:44:04">2022-08-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction.html" title="Transactional Information Systems: Syntax and Semantics of Transaction"><img src="/../images/cover2.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Transactional Information Systems: Syntax and Semantics of Transaction"/></a><div class="content"><a class="title" href="/post/Transactional-Information-Systems-Syntax-and-Semantics-of-Transaction.html" title="Transactional Information Systems: Syntax and Semantics of Transaction">Transactional Information Systems: Syntax and Semantics of Transaction</a><time datetime="2022-08-08T11:20:05.000Z" title="发表于 2022-08-08 19:20:05">2022-08-08</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/TinyKV-Course-RaftStore%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B.html" title="TinyKV Course: RaftStore执行流程"><img src="/../images/cover3.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="TinyKV Course: RaftStore执行流程"/></a><div class="content"><a class="title" href="/post/TinyKV-Course-RaftStore%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B.html" title="TinyKV Course: RaftStore执行流程">TinyKV Course: RaftStore执行流程</a><time datetime="2022-07-18T12:21:04.000Z" title="发表于 2022-07-18 20:21:04">2022-07-18</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.html" title="TinyKV Course: RaftStore源码解析"><img src="/../images/cover4.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="TinyKV Course: RaftStore源码解析"/></a><div class="content"><a class="title" href="/post/TinyKV-Course-RaftStore%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.html" title="TinyKV Course: RaftStore源码解析">TinyKV Course: RaftStore源码解析</a><time datetime="2022-07-12T09:51:17.000Z" title="发表于 2022-07-12 17:51:17">2022-07-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/SICP-Chapter3-The-Environment-Model-of-Evaluation.html" title="SICP Chapter3: The Environment Model of Evaluation"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="SICP Chapter3: The Environment Model of Evaluation"/></a><div class="content"><a class="title" href="/post/SICP-Chapter3-The-Environment-Model-of-Evaluation.html" title="SICP Chapter3: The Environment Model of Evaluation">SICP Chapter3: The Environment Model of Evaluation</a><time datetime="2022-07-06T03:40:18.000Z" title="发表于 2022-07-06 11:40:18">2022-07-06</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2022 By null</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.min.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
