@@ -210,14 +210,14 @@ x := f(v_{j_1}, v_{j_2},\ldots, v_{j_r})\\
 <h2 id="The-concept-about-history-and-schedule"><a href="#The-concept-about-history-and-schedule" class="headerlink" title="The concept about history and schedule"></a>The concept about history and schedule</h2><p>The described anomalies above, reveal challenges to a transactional processing system. The key to the avoid these anomalies is to provide algorithms for generating correct execution schedules. Here we introduce the concept about <strong>history</strong>, which describes the execution of multiple transactions, and the concept of <strong>schedule</strong>, which is a prefix of history, that indicates there are some undecided transactions.</p>
 <h3 id="History"><a href="#History" class="headerlink" title="History"></a>History</h3><p>Simply speaking, a <strong>history</strong> is an execution arragements of transactions that maintain the dependency relationship of contained transactions. Here is the formal definition:</p>
 <blockquote>
-<p>Let $T = \{t_{1},\ldots,t_{n} \}$ be a (ﬁnite) set of transactions, where each $t_{i} \in T$ has the form$ t_i = (\mbox{op}_{i}, &lt;_{i})$, with $\mbox{op}_{i}$ denoting the set of operations of $t_{i}$ and $&lt;_{i}$ denoting their ordering, $1 \leq i\leq n$.</p>
+<p>Let $T = {t<em>{1},\ldots,t</em>{n} }$ be a (ﬁnite) set of transactions, where each $t<em>{i} \in T$ has the form$ t_i = (\mbox{op}</em>{i}, &lt;<em>{i})$, with $\mbox{op}</em>{i}$ denoting the set of operations of $t<em>{i}$ and $&lt;</em>{i}$ denoting their ordering, $1 \leq i\leq n$.</p>
 <ol>
 <li>A history for $ T $ is a pair $s = (\mbox{op}(s), &lt;_{s} )$ such that:<ul>
-<li>$\mbox{op}(s)\subseteq \bigcup_{i=1}^{n}\mbox{op}_{i}\cup\bigcup_{i=1}^{n}\{a_i, c_i\}$ and $\bigcup_{i=1}^{n}\mbox{op}_{i}\subseteq \mbox{op}(s)$ ,i.e., $s$ consists of the <u>union of the operations</u> from the given transactions plus a termination operation, which is either a $c_i$ (commit) or an $a_i$ (abort), for each $t_i \in T$;</li>
+<li>$\mbox{op}(s)\subseteq \bigcup<em>{i=1}^{n}\mbox{op}</em>{i}\cup\bigcup<em>{i=1}^{n}{a_i, c_i}$ and $\bigcup</em>{i=1}^{n}\mbox{op}_{i}\subseteq \mbox{op}(s)$ ,i.e., $s$ consists of the <u>union of the operations</u> from the given transactions plus a termination operation, which is either a $c_i$ (commit) or an $a_i$ (abort), for each $t_i \in T$;</li>
 <li>$(\forall i, 1\leq i\leq n): c_i\in \mbox{op}(s) \Leftrightarrow a_i\notin \mbox{op}(s)$, i.e., for each transaction, there is <u>either a commit or an abort</u> in $s$, but not both;</li>
-<li>$\bigcup_{i=1}^{n}<_{i}\subseteq <_{s}$ , i.e., all <u>transaction orders are contained&lt;/u&gt; in the partial order given by $s$;</_{i}\subseteq></li>
-<li>$(\forall i, 1 \leq i \leq n)(\forall p \in \mbox{op}_i): p <_{s} a_i\mbox{ or } p <_{s} c _i$, i.e., the <u>Commit or Abort operation always appears as the last step&lt;/u&gt; of a transaction</_{s}></li>
-<li>Every pair of operations $p, q \in \mbox{op}(s)$ from distinct transactions that access the same data item and have at least one write operation among them is ordered in $s$ in such a way that either $p &lt;_{s} q$ or $q &lt;_{s} p$.</li>
+<li>$\bigcup<em>{i=1}^{n}&lt;</em>{i}\subseteq <_{s}$ , i.e., all <u>transaction orders are contained&lt;/u&gt; in the partial order given by $s$;</_{s}$></li>
+<li>$(\forall i, 1 \leq i \leq n)(\forall p \in \mbox{op}<em>i): p &lt;</em>{s} a<em>i\mbox{ or } p &lt;</em>{s} c _i$, i.e., the <u>Commit or Abort operation always appears as the last step</u> of a transaction</li>
+<li>Every pair of operations $p, q \in \mbox{op}(s)$ from distinct transactions that access the same data item and have at least one write operation among them is ordered in $s$ in such a way that either $p &lt;<em>{s} q$ or $q &lt;</em>{s} p$.</li>
 </ul>
 </li>
 </ol>
@@ -246,12 +246,12 @@ r_1(x)r_2(x)r_1(z)w_1(x)w_2(y)r_3(z)w_3(y)c_1c_2w_3(z)c_3</script><p>This is a h
 </blockquote>
 <p>For a total case, i.e, the history a sequence of actions together will commit or abort flag, the “prefix” is well defined. However, for partial order case where a history is itself a DAG, the “prefix” is not that clear, we give the formal definition of “prefix” in the sense of partial order: </p>
 <blockquote>
-<p>Let $s = (\mbox{op}(s), &lt;_{s})$ be a history, i.e, a partial order set. Then a prefix of $s$ is a partial order set $s’=(\mbox{op}(s’), &lt;_{s’})$ satisfies:</p>
+<p>Let $s = (\mbox{op}(s), &lt;<em>{s})$ be a history, i.e, a partial order set. Then a prefix of $s$ is a partial order set $s’=(\mbox{op}(s’), &lt;</em>{s’})$ satisfies:</p>
 <ul>
-<li>$\mbox{op}_{s’}\subseteq \mbox{op}_{s}$</li>
-<li>$&lt;_{s’}\subseteq &lt;_{s}$</li>
-<li>$(\forall p\in \mbox{op}(s))(\forall q\in \mbox{op}(s’)): p&lt;_{s}q\Rightarrow p\in \mbox{op}_{s’}$</li>
-<li>$(\forall p,q\in \mbox{op}(s’)): p&lt;_{s}q\Rightarrow p&lt;_{s’}q$</li>
+<li>$\mbox{op}<em>{s’}\subseteq \mbox{op}</em>{s}$</li>
+<li>$&lt;<em>{s’}\subseteq &lt;</em>{s}$</li>
+<li>$(\forall p\in \mbox{op}(s))(\forall q\in \mbox{op}(s’)): p&lt;<em>{s}q\Rightarrow p\in \mbox{op}</em>{s’}$</li>
+<li>$(\forall p,q\in \mbox{op}(s’)): p&lt;<em>{s}q\Rightarrow p&lt;</em>{s’}q$</li>
 </ul>
 </blockquote>
 <p>The prefix of a history based on partial order describes a few paths to an end point. The third axioms says that if an element in the prefix, then any predecessor must also be in the prefix. The second axiom requires the prefix has no additional order compared with original set. The forth axiom requires the order is maintained in the prefix. </p>
@@ -274,13 +274,13 @@ r_1(x)r_2(x)r_1(z)w_1(x)w_2(y)r_3(z)w_3(y)c_1c_2w_3(z)c_3</script><p>Then the fo
 <h4 id="More-terminologies"><a href="#More-terminologies" class="headerlink" title="More terminologies"></a>More terminologies</h4><p>A schedule is an incomplete part of history, however, we can still get some partial information of this construct, here are some notations about a schedule: </p>
 <blockquote>
 <ol>
-<li><p>$\mbox{trans}(s) := \{ t_i| s \mbox{ contains steps from } t_i\}$ </p>
+<li><p>$\mbox{trans}(s) := { t_i| s \mbox{ contains steps from } t_i}$ </p>
 <p>$\mbox{trans}(s)$ denotes the set of all transactions occurring partially or completely in $s$.</p>
 </li>
-<li><p>$\mbox{commit}(s) := \{ t_i \in \mbox{trans}(s) \mid c_i \in s \}$</p>
+<li><p>$\mbox{commit}(s) := { t_i \in \mbox{trans}(s) \mid c_i \in s }$</p>
 <p>$\mbox{commit}(s) $denotes the set of all transactions that are committed in $s$.</p>
 </li>
-<li><p>$\mbox{abort}(s) := \{ t_i \in \mbox{trans}(s) \mid a_i \in s \}$</p>
+<li><p>$\mbox{abort}(s) := { t_i \in \mbox{trans}(s) \mid a_i \in s }$</p>
 <p>$\mbox{abort}(s)$ denotes the set of all transactions that are aborted in $s$.</p>
 </li>
 <li><p>$\mbox{active}(s) := \mbox{trans}(s) − (\mbox{commit}(s) \cup \mbox{abort}(s))$ </p>
